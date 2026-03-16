@@ -11,15 +11,15 @@ class Task(models.Model):
     PRIORITY_HIGH = "high"
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pending"),
-        (STATUS_IN_PROGRESS, "In Progress"),
-        (STATUS_DONE, "Done"),
+        (STATUS_PENDING, "Pendiente"),
+        (STATUS_IN_PROGRESS, "En progreso"),
+        (STATUS_DONE, "Hecha"),
     ]
 
     PRIORITY_CHOICES = [
-        (PRIORITY_LOW, "Low"),
-        (PRIORITY_MEDIUM, "Medium"),
-        (PRIORITY_HIGH, "High"),
+        (PRIORITY_LOW, "Baja"),
+        (PRIORITY_MEDIUM, "Media"),
+        (PRIORITY_HIGH, "Alta"),
     ]
 
     title = models.CharField(max_length=200)
