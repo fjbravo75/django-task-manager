@@ -1,18 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task List</title>
+    <title>Listado de tareas</title>
+    <link rel="stylesheet" href="{% static 'tasks/styles.css' %}">
 </head>
 <body>
-    <h1>Task List</h1>
-    <ul>
-        {% for task in tasks %}
-            <li>{{ task }}</li>
-        {% empty %}
-            <li>No tasks yet.</li>
-        {% endfor %}
-    </ul>
+    <main class="app-shell">
+        <section class="form-screen">
+            <header class="screen-header">
+                <div class="screen-header-top">
+                    <div class="screen-header-copy">
+                        <h1 class="screen-title">Listado de tareas</h1>
+                        <p class="screen-subtitle">
+                            Consulta las tareas registradas y accede al formulario para crear nuevas.
+                        </p>
+                    </div>
+
+                    <a class="button-primary button-dark" href="{% url 'task_create' %}">Nueva tarea</a>
+                </div>
+            </header>
+
+            <section class="form-panel">
+                <div class="form-panel-header">
+                    <h2 class="panel-title">Tareas disponibles</h2>
+                    <p class="panel-subtitle">
+                        Revisa el estado actual de las tareas creadas en la aplicación.
+                    </p>
+                </div>
+
+                {% if tasks %}
+                    <ul class="task-list">
+                        {% for task in tasks %}
+                            <li class="task-list-item">
+                                <div class="task-list-copy">
+                                    <h3 class="task-list-title">{{ task.title }}</h3>
+                                    {% if task.description %}
+                                        <p class="task-list-description">{{ task.description }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="task-list-meta">
+                                    <span class="task-pill">{{ task.get_status_display }}</span>
+                                    <span class="task-pill task-pill-muted">{{ task.get_priority_display }}</span>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="task-empty-state">
+                        <h3 class="task-empty-title">Todavía no hay tareas</h3>
+                        <p class="task-empty-text">
+                            Crea la primera tarea para empezar a trabajar desde la interfaz web.
+                        </p>
+                        <a class="button-primary button-dark" href="{% url 'task_create' %}">Crear tarea</a>
+                    </div>
+                {% endif %}
+            </section>
+        </section>
+    </main>
 </body>
 </html>
