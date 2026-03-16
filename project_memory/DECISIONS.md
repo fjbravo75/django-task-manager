@@ -89,3 +89,19 @@ En la primera generación del modelo Task, algunos detalles importantes no se fi
 
 ### Estado
 Vigente
+
+## 2026-03-16 — Dar por suficiente la base visual inicial del Proyecto B
+
+### Decisión
+La base visual actual de task_form y task_list se acepta como suficiente, uniforme y presentable para esta fase. No compensa seguir iterando diseño fino a ojo sobre este mismo bloque.
+
+### Motivo
+El objetivo actual es visibilidad funcional y coherencia general del producto, no perfeccionismo gráfico sobre una base ya suficiente.
+
+### Impacto práctico
+- Las siguientes iteraciones deben priorizar funcionalidad visible y continuidad del flujo.
+- El criterio visual para próximos pasos será coherencia general y presentabilidad suficiente.
+- No se reabre este bloque para pulido fino salvo necesidad clara.
+
+### Estado
+Vigente

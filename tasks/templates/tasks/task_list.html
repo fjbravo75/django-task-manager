@@ -36,7 +36,9 @@
                         {% for task in tasks %}
                             <li class="task-list-item">
                                 <div class="task-list-copy">
-                                    <h3 class="task-list-title">{{ task.title }}</h3>
+                                    <h3 class="task-list-title">
+                                        <a class="task-list-link" href="{% url 'task_detail' task.pk %}">{{ task.title }}</a>
+                                    </h3>
                                     {% if task.description %}
                                         <p class="task-list-description">{{ task.description }}</p>
                                     {% endif %}
@@ -45,6 +47,7 @@
                                 <div class="task-list-meta">
                                     <span class="task-pill">{{ task.get_status_display }}</span>
                                     <span class="task-pill task-pill-muted">{{ task.get_priority_display }}</span>
+                                    <a class="button-secondary task-list-action" href="{% url 'task_detail' task.pk %}">Ver detalle</a>
                                 </div>
                             </li>
                         {% endfor %}

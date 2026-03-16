@@ -4,28 +4,26 @@
 django-task-manager
 
 ## Estado actual
-El proyecto Django base está creado y operativo dentro del entorno djtask. La app tasks ya está integrada en INSTALLED_APPS. El modelo Task ya existe, está migrado y registrado en admin. El panel de administración ya fue validado en local y se creó una tarea real de prueba para comprobar persistencia end-to-end.
+El repositorio local está asentado con Git y sincronizado con origin/main. La app tasks mantiene fuera del admin listado, alta básica y detalle de tarea. El flujo listado -> crear -> guardar -> volver al listado está resuelto y el listado permite entrar al detalle individual de una tarea. task_form, task_list y task_detail comparten una base visual uniforme, limpia y suficientemente presentable. El microbloque de detalle quedó cerrado funcional y visualmente, con los ajustes finales de alineación del listado y de la descripción en detalle ya validados.
 
 ## Bloque activo
-Asentar el repositorio del Proyecto B a nivel profesional antes de abrir la primera capa web fuera del admin.
+Microbloque de detalle de tarea fuera del admin cerrado.
 
 ## Siguiente paso exacto
-Comprobar si el repositorio local ya está inicializado con Git. Si no lo está, inicializar Git, crear o revisar un .gitignore adecuado para Django, revisar el estado del árbol y hacer un primer commit coherente con la base funcional ya conseguida. Después, vincular o crear el remoto en GitHub y hacer el primer push.
+Edición de tarea fuera del admin, sin abrir todavía borrado ni autenticación.
 
 ## Restricciones vigentes
-- No abrir todavía autenticación, formularios, filtros ni CRUD web completo.
+- No abrir todavía edición, borrado ni autenticación.
 - No abrir nuevos frentes de configuración salvo necesidad real.
 - No añadir librerías ni complejidad innecesaria.
-- Priorizar cambios visibles y útiles para portfolio.
+- Priorizar funcionalidad visible, coherencia general y presentabilidad suficiente sobre perfeccionismo gráfico.
 - Usar prompts cerrados y concretos al trabajar con Codex.
 
 ## Archivos foco del bloque actual
-- .gitignore
-- requirements.txt
-- config/settings.py
-- tasks/models.py
-- tasks/admin.py
-- manage.py
+- tasks/templates/tasks/task_list.html
+- tasks/views.py
+- tasks/urls.py
+- tasks/templates/tasks/task_detail.html
 
 ## Última actualización
-2026-03-13
+2026-03-16
