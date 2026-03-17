@@ -95,3 +95,83 @@ Queda resuelto y cerrado el microbloque de detalle de tarea fuera del admin, tan
 
 ### Pendiente inmediato
 - Edición de tarea fuera del admin, sin abrir todavía borrado ni autenticación.
+
+## 2026-03-17
+
+### Objetivo
+Cerrar la edición de tarea fuera del admin reutilizando la base existente del formulario y manteniendo el flujo actual.
+
+### Trabajo realizado
+- Se creó la vista de edición con obtención segura de la tarea y guardado sobre la misma instancia.
+- Se añadió la ruta de edición individual fuera del admin.
+- Se reutilizó la plantilla task_form con textos dinámicos para creación y edición.
+- Se conectó el acceso a edición desde la vista de detalle.
+- Se fijó la redirección tras guardar hacia el detalle actualizado de la tarea.
+- Se validó con python manage.py check en el entorno djtask sin incidencias.
+- Se validó de forma real el flujo GET edición -> render del formulario -> POST válido -> guardado en base de datos -> redirección 302 a detalle -> detalle final 200.
+
+### Archivos tocados
+- tasks/views.py
+- tasks/urls.py
+- tasks/templates/tasks/task_form.html
+- tasks/templates/tasks/task_detail.html
+- project_memory/CURRENT_CONTEXT.md
+- project_memory/SESSION_LOG.md
+
+### Resultado
+Queda cerrada la edición de tarea fuera del admin como siguiente ampliación funcional visible del flujo web actual.
+
+### Pendiente inmediato
+- Definir el siguiente microbloque visible sin abrir todavía autenticación.
+
+## 2026-03-17
+
+### Objetivo
+Cerrar el borrado de tarea fuera del admin con confirmación explícita y redirección coherente al listado.
+
+### Trabajo realizado
+- Se creó la vista de borrado con obtención segura de la tarea.
+- Se añadió la ruta individual de borrado fuera del admin.
+- Se creó una pantalla de confirmación reutilizando la base visual actual.
+- Se conectó el acceso a borrado desde la vista de detalle.
+- Se dejó la eliminación efectiva solo tras confirmación por POST.
+- Se fijó la redirección tras borrar hacia el listado de tareas.
+- Se validó con python manage.py check en el entorno djtask sin incidencias.
+- Se validó de forma real el flujo GET borrado -> render de confirmación -> POST válido -> borrado efectivo -> redirección 302 a listado -> listado sin la tarea -> detalle posterior 404.
+
+### Archivos tocados
+- tasks/views.py
+- tasks/urls.py
+- tasks/templates/tasks/task_detail.html
+- tasks/templates/tasks/task_confirm_delete.html
+- project_memory/CURRENT_CONTEXT.md
+- project_memory/SESSION_LOG.md
+
+### Resultado
+Queda cerrado el borrado de tarea fuera del admin como último paso del CRUD visible básico en la interfaz web actual.
+
+### Pendiente inmediato
+- Revisar si el CRUD visible fuera del admin se da por cerrado para esta fase antes de abrir un bloque nuevo como autenticación.
+
+## 2026-03-17
+
+### Objetivo
+Cerrar los ajustes finales de presentación y texto del flujo visible fuera del admin sin abrir bloques nuevos.
+
+### Trabajo realizado
+- Se reajustó la cabecera de detalle para dejar título, subtítulo y acciones en un único bloque vertical más compacto.
+- Se dejó el título preparado para ocupar varias líneas sin truncado ni desequilibrio visual.
+- Se mantuvo el grupo de acciones debajo del subtítulo en una única zona visual con salto de línea si hace falta.
+- Se afinó el texto de confirmación de borrado con una redacción más natural.
+
+### Archivos tocados
+- tasks/templates/tasks/task_detail.html
+- tasks/views.py
+- project_memory/CURRENT_CONTEXT.md
+- project_memory/SESSION_LOG.md
+
+### Resultado
+Queda consolidado el CRUD visible fuera del admin a nivel funcional y con un cierre visual razonable en detalle y borrado.
+
+### Pendiente inmediato
+- Definir con prompt cerrado si la siguiente fase será autenticación, sin abrirla todavía en el código.
