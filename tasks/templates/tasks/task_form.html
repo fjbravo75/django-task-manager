@@ -4,7 +4,7 @@
     {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nueva tarea</title>
+    <title>{{ page_title }}</title>
     <link rel="stylesheet" href="{% static 'tasks/styles.css' %}">
 </head>
 <body>
@@ -13,10 +13,8 @@
             <header class="screen-header">
                 <div class="screen-header-top">
                     <div class="screen-header-copy">
-                        <h1 class="screen-title">Nueva tarea</h1>
-                        <p class="screen-subtitle">
-                            Crea una nueva tarea y guárdala en el sistema.
-                        </p>
+                        <h1 class="screen-title">{{ screen_title }}</h1>
+                        <p class="screen-subtitle">{{ screen_subtitle }}</p>
                     </div>
 
                     <a class="text-link" href="{% url 'task_list' %}">Volver al listado</a>
@@ -25,10 +23,8 @@
 
             <section class="form-panel">
                 <div class="form-panel-header">
-                    <h2 class="panel-title">Detalles de la tarea</h2>
-                    <p class="panel-subtitle">
-                        Completa los campos principales para guardar la tarea en el sistema.
-                    </p>
+                    <h2 class="panel-title">{{ panel_title }}</h2>
+                    <p class="panel-subtitle">{{ panel_subtitle }}</p>
                 </div>
 
                 <form method="post" class="task-form-grid" novalidate>
@@ -61,8 +57,12 @@
                     </div>
 
                     <div class="form-actions">
-                        <a class="button-secondary" href="{% url 'task_list' %}">Cancelar</a>
-                        <button class="button-primary button-dark" type="submit">Guardar tarea</button>
+                        {% if cancel_url_kwargs %}
+                            <a class="button-secondary" href="{% url cancel_url pk=cancel_url_kwargs.pk %}">Cancelar</a>
+                        {% else %}
+                            <a class="button-secondary" href="{% url cancel_url %}">Cancelar</a>
+                        {% endif %}
+                        <button class="button-primary button-dark" type="submit">{{ submit_label }}</button>
                     </div>
                 </form>
             </section>
