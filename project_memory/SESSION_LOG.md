@@ -175,3 +175,43 @@ Queda consolidado el CRUD visible fuera del admin a nivel funcional y con un cie
 
 ### Pendiente inmediato
 - Definir con prompt cerrado si la siguiente fase será autenticación, sin abrirla todavía en el código.
+
+## 2026-03-17
+
+### Objetivo
+Integrar Tailwind CSS por CLI simple y aplicarlo solo a la capa visible actual del CRUD fuera del admin.
+
+### Trabajo realizado
+- Se añadió una integración mínima de npm para Tailwind CSS por CLI simple.
+- Se creó un CSS de entrada específico para Tailwind dentro de los estáticos de tasks.
+- Se dejó la salida compilada de Tailwind en la misma ruta estática ya consumida por Django.
+- Se creó una base local simple para las plantillas de tasks sin reestructurar el sistema global de templates.
+- Se migraron a esa base las plantillas visibles del CRUD actual: listado, formulario, detalle y confirmación de borrado.
+- Se rehízo la capa visual con utilidades Tailwind manteniendo intacto el comportamiento funcional del CRUD.
+- Se verificó que el CSS compilado incluye clases usadas en plantillas Django mediante @source.
+- Se validó con python manage.py check en el entorno djtask sin incidencias.
+- Se validó compilación correcta con npm run build:css.
+- Se validó arranque real del servidor de desarrollo.
+- Se validó por HTTP el render básico de listado, alta, detalle, edición, confirmación de borrado y carga de /static/tasks/styles.css con respuesta 200.
+- Se validó además con Client de Django que crear, editar y borrar siguieron funcionando tras la integración.
+
+### Archivos tocados
+- .gitignore
+- package.json
+- package-lock.json
+- tasks/static/tasks/tailwind.input.css
+- tasks/static/tasks/styles.css
+- tasks/templates/tasks/base.html
+- tasks/templates/tasks/task_list.html
+- tasks/templates/tasks/task_form.html
+- tasks/templates/tasks/task_detail.html
+- tasks/templates/tasks/task_confirm_delete.html
+- project_memory/CURRENT_CONTEXT.md
+- project_memory/SESSION_LOG.md
+- project_memory/DECISIONS.md
+
+### Resultado
+Queda integrada y validada una capa de presentabilidad con Tailwind CSS sobre el CRUD visible ya existente, sin abrir nuevos bloques funcionales ni romper el flujo actual.
+
+### Pendiente inmediato
+- Definir con prompt cerrado la siguiente fase funcional después del cierre visual actual, previsiblemente autenticación, sin abrirla todavía en el código.

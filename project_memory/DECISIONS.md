@@ -105,3 +105,20 @@ El objetivo actual es visibilidad funcional y coherencia general del producto, n
 
 ### Estado
 Vigente
+
+## 2026-03-17 — Integrar Tailwind CSS por CLI simple sobre la capa visible actual
+
+### Decisión
+La mejora visual de la capa visible actual del CRUD fuera del admin se implementa con Tailwind CSS por CLI simple, sin PostCSS y sin introducir una toolchain frontend más compleja.
+
+### Motivo
+Permite elevar la presentabilidad del proyecto con una integración pequeña, mantenible y suficiente para un portfolio Django junior sin abrir un frente técnico innecesario.
+
+### Impacto práctico
+- npm queda limitado a lo necesario para compilar Tailwind.
+- El CSS de entrada se mantiene dentro de los estáticos de tasks.
+- El CSS compilado se sirve desde la ruta estática ya usada por las plantillas de la app.
+- La base común de plantillas para esta integración se limita a tasks/templates/tasks/.
+
+### Estado
+Vigente

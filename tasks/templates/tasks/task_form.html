@@ -1,72 +1,62 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    {% load static %}
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
-    <link rel="stylesheet" href="{% static 'tasks/styles.css' %}">
-</head>
-<body>
-    <main class="app-shell">
-        <section class="form-screen">
-            <header class="screen-header">
-                <div class="screen-header-top">
-                    <div class="screen-header-copy">
-                        <h1 class="screen-title">{{ screen_title }}</h1>
-                        <p class="screen-subtitle">{{ screen_subtitle }}</p>
-                    </div>
+{% extends 'tasks/base.html' %}
 
-                    <a class="text-link" href="{% url 'task_list' %}">Volver al listado</a>
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-3xl space-y-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 space-y-2">
+                <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{{ screen_title }}</h1>
+                <p class="max-w-2xl text-sm leading-6 text-slate-600">{{ screen_subtitle }}</p>
+            </div>
+
+            <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'task_list' %}">Volver al listado</a>
+        </header>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
+            <div class="mb-6 border-b border-slate-200 pb-4">
+                <h2 class="text-lg font-semibold text-slate-950">{{ panel_title }}</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">{{ panel_subtitle }}</p>
+            </div>
+
+            <form method="post" class="grid gap-5" novalidate>
+                {% csrf_token %}
+
+                <div class="grid gap-2">
+                    <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+                    {{ form.title }}
+                    {{ form.title.errors }}
                 </div>
-            </header>
 
-            <section class="form-panel">
-                <div class="form-panel-header">
-                    <h2 class="panel-title">{{ panel_title }}</h2>
-                    <p class="panel-subtitle">{{ panel_subtitle }}</p>
+                <div class="grid gap-2">
+                    <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {{ form.description.errors }}
                 </div>
 
-                <form method="post" class="task-form-grid" novalidate>
-                    {% csrf_token %}
-
-                    <div class="form-row">
-                        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-                        {{ form.title }}
-                        {{ form.title.errors }}
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2">
+                        <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                        {{ form.status }}
+                        {{ form.status.errors }}
                     </div>
 
-                    <div class="form-row">
-                        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-                        {{ form.description }}
-                        {{ form.description.errors }}
+                    <div class="grid gap-2">
+                        <label for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>
+                        {{ form.priority }}
+                        {{ form.priority.errors }}
                     </div>
+                </div>
 
-                    <div class="form-two-columns">
-                        <div class="form-row">
-                            <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
-                            {{ form.status }}
-                            {{ form.status.errors }}
-                        </div>
-
-                        <div class="form-row">
-                            <label for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>
-                            {{ form.priority }}
-                            {{ form.priority.errors }}
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        {% if cancel_url_kwargs %}
-                            <a class="button-secondary" href="{% url cancel_url pk=cancel_url_kwargs.pk %}">Cancelar</a>
-                        {% else %}
-                            <a class="button-secondary" href="{% url cancel_url %}">Cancelar</a>
-                        {% endif %}
-                        <button class="button-primary button-dark" type="submit">{{ submit_label }}</button>
-                    </div>
-                </form>
-            </section>
+                <div class="flex flex-wrap items-center justify-end gap-3 pt-2">
+                    {% if cancel_url_kwargs %}
+                        <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url cancel_url pk=cancel_url_kwargs.pk %}">Cancelar</a>
+                    {% else %}
+                        <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url cancel_url %}">Cancelar</a>
+                    {% endif %}
+                    <button class="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">{{ submit_label }}</button>
+                </div>
+            </form>
         </section>
-    </main>
-</body>
-</html>
+    </section>
+{% endblock %}

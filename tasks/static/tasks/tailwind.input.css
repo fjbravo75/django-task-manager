@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@source "../../templates";
+
+@layer base {
+  label {
+    @apply block text-sm font-medium text-slate-800;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200;
+  }
+
+  textarea {
+    @apply min-h-36 resize-y;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .errorlist {
+    @apply mt-2 list-none p-0 text-sm font-medium text-rose-700;
+  }
+}
