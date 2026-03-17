@@ -46,6 +46,44 @@
                         </li>
                     {% endfor %}
                 </ul>
+
+                {% if tasks.paginator.num_pages > 1 %}
+                    <nav class="mt-10 pt-2" aria-label="Paginación del listado de tareas">
+                        <div class="flex justify-center">
+                            <div class="inline-flex items-center whitespace-nowrap text-sm">
+                                {% if tasks.has_previous %}
+                                    <a
+                                        class="font-medium text-slate-900 transition hover:text-slate-600"
+                                        href="?page={{ tasks.previous_page_number }}"
+                                    >
+                                        Anterior
+                                    </a>
+                                {% else %}
+                                    <span class="font-medium text-slate-400">
+                                        Anterior
+                                    </span>
+                                {% endif %}
+
+                                <span class="mx-6 text-slate-500 sm:mx-8">
+                                    Página {{ tasks.number }} de {{ tasks.paginator.num_pages }}
+                                </span>
+
+                                {% if tasks.has_next %}
+                                    <a
+                                        class="font-medium text-slate-900 transition hover:text-slate-600"
+                                        href="?page={{ tasks.next_page_number }}"
+                                    >
+                                        Siguiente
+                                    </a>
+                                {% else %}
+                                    <span class="font-medium text-slate-400">
+                                        Siguiente
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </nav>
+                {% endif %}
             {% else %}
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
                     <h3 class="text-lg font-semibold text-slate-950">Todavía no hay tareas</h3>

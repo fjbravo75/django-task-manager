@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from tasks.forms import TaskForm
@@ -5,7 +6,10 @@ from tasks.models import Task
 
 
 def task_list(request):
-    tasks = Task.objects.all()
+    task_list = Task.objects.order_by('pk')
+    paginator = Paginator(task_list, 5)
+    page_number = request.GET.get('page')
+    tasks = paginator.get_page(page_number)
     return render(request, 'tasks/task_list.html', {'tasks': tasks})
 
 
