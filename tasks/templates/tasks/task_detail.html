@@ -1,75 +1,65 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    {% load static %}
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ task.title }}</title>
-    <link rel="stylesheet" href="{% static 'tasks/styles.css' %}">
-</head>
-<body>
-    <main class="app-shell">
-        <section class="form-screen">
-            <header class="screen-header">
-                <div class="screen-header-top" style="display: block;">
-                    <h1 class="screen-title" style="word-break: break-word; overflow-wrap: anywhere;">{{ task.title }}</h1>
-                    <p class="screen-subtitle">
-                        Consulta el detalle básico de la tarea seleccionada.
-                    </p>
+{% extends 'tasks/base.html' %}
 
-                    <div class="task-detail-actions" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px;">
-                        <a class="button-secondary" href="{% url 'task_update' task.pk %}">Editar tarea</a>
-                        <a class="button-secondary" href="{% url 'task_delete' task.pk %}">Eliminar tarea</a>
-                        <a class="text-link" href="{% url 'task_list' %}">Volver al listado</a>
-                    </div>
-                </div>
-            </header>
+{% block title %}{{ task.title }}{% endblock %}
 
-            <section class="form-panel">
-                <div class="form-panel-header">
-                    <h2 class="panel-title">Detalle de la tarea</h2>
-                    <p class="panel-subtitle">
-                        Información actual registrada para esta tarea.
-                    </p>
+{% block content %}
+    <section class="mx-auto max-w-3xl space-y-6">
+        <header class="space-y-4">
+            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl" style="word-break: break-word; overflow-wrap: anywhere;">{{ task.title }}</h1>
+            <p class="max-w-2xl text-sm leading-6 text-slate-600">
+                Consulta el detalle básico de la tarea seleccionada.
+            </p>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'task_update' task.pk %}">Editar tarea</a>
+                <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'task_delete' task.pk %}">Eliminar tarea</a>
+                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'task_list' %}">Volver al listado</a>
+            </div>
+        </header>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
+            <div class="mb-6 border-b border-slate-200 pb-4">
+                <h2 class="text-lg font-semibold text-slate-950">Detalle de la tarea</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                    Información actual registrada para esta tarea.
+                </p>
+            </div>
+
+            <dl class="grid gap-4">
+                <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <dt class="text-sm font-medium text-slate-600">Título</dt>
+                    <dd class="break-words text-sm leading-6 text-slate-900">{{ task.title }}</dd>
                 </div>
 
-                <dl class="task-detail-grid">
-                    <div class="task-detail-row">
-                        <dt class="task-detail-label">Título</dt>
-                        <dd class="task-detail-value">{{ task.title }}</dd>
+                <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <dt class="text-sm font-medium text-slate-600">Descripción</dt>
+                    <dd class="break-words text-sm leading-6 text-slate-900">{% if task.description %}{{ task.description }}{% else %}Sin descripción.{% endif %}</dd>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Estado</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.get_status_display }}</dd>
                     </div>
 
-                    <div class="task-detail-row task-detail-row-description">
-                        <dt class="task-detail-label">Descripción</dt>
-                        <dd class="task-detail-value task-detail-value-description">{% if task.description %}{{ task.description }}{% else %}Sin descripción.{% endif %}</dd>
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Prioridad</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.get_priority_display }}</dd>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Creada</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.created_at|date:"d/m/Y H:i" }}</dd>
                     </div>
 
-                    <div class="task-detail-two-columns">
-                        <div class="task-detail-row">
-                            <dt class="task-detail-label">Estado</dt>
-                            <dd class="task-detail-value">{{ task.get_status_display }}</dd>
-                        </div>
-
-                        <div class="task-detail-row">
-                            <dt class="task-detail-label">Prioridad</dt>
-                            <dd class="task-detail-value">{{ task.get_priority_display }}</dd>
-                        </div>
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Actualizada</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.updated_at|date:"d/m/Y H:i" }}</dd>
                     </div>
-
-                    <div class="task-detail-two-columns">
-                        <div class="task-detail-row">
-                            <dt class="task-detail-label">Creada</dt>
-                            <dd class="task-detail-value">{{ task.created_at|date:"d/m/Y H:i" }}</dd>
-                        </div>
-
-                        <div class="task-detail-row">
-                            <dt class="task-detail-label">Actualizada</dt>
-                            <dd class="task-detail-value">{{ task.updated_at|date:"d/m/Y H:i" }}</dd>
-                        </div>
-                    </div>
-                </dl>
-            </section>
+                </div>
+            </dl>
         </section>
-    </main>
-</body>
-</html>
+    </section>
+{% endblock %}

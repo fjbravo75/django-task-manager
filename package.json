@@ -1,0 +1,12 @@
+{
+  "name": "django-task-manager",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./tasks/static/tasks/tailwind.input.css -o ./tasks/static/tasks/styles.css",
+    "watch:css": "tailwindcss -i ./tasks/static/tasks/tailwind.input.css -o ./tasks/static/tasks/styles.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  }
+}
