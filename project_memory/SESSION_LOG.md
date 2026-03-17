@@ -236,3 +236,36 @@ Queda cerrado el bloque de presentabilidad del CRUD visible y alineada la memori
 
 ### Pendiente inmediato
 - Paginación simple del listado de tareas.
+
+## Semana 2 - Día 2 - 17 de marzo de 2026
+
+### Microbloque cerrado
+Implementada y cerrada la paginación simple del listado de tareas en Proyecto B (`django-task-manager`).
+
+### Resultado
+La vista de listado ya muestra 5 tareas por página usando `Paginator` de Django. La navegación funciona con query string (`?page=`) y queda resuelta de forma segura con `get_page()`, evitando errores por páginas inválidas o fuera de rango.
+
+Además, se ajustó manualmente la presentación visual final del bloque de paginación para que quedara centrado, limpio y coherente con la interfaz actual. El resultado validado en navegador muestra la línea:
+- `Anterior`
+- `Página X de Y`
+- `Siguiente`
+
+Todo en español, con separación visual correcta y sin elementos tipo botón o chip para el número de página.
+
+### Archivos tocados
+- `tasks/views.py`
+- `tasks/templates/tasks/task_list.html`
+- `tasks/static/tasks/styles.css`
+
+### Validación realizada
+- recompilación de Tailwind
+- revisión visual real en navegador
+- comprobación de que la paginación ya se muestra correctamente
+- validación de la composición visual final del bloque de navegación
+
+### Git
+- commit: `f166773`
+- mensaje: `Add pagination to task list`
+
+### Siguiente paso
+Implementar edición de tareas fuera del admin.
