@@ -23,14 +23,15 @@ class TaskForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        board = kwargs.pop("board", None)
         super().__init__(*args, **kwargs)
-        self.fields["task_list"].queryset = self.fields["task_list"].queryset.select_related("board").order_by(
-            "board__name",
-            "position",
-            "name",
-        )
+        task_list_queryset = self.fields["task_list"].queryset.select_related("board")
+        tag_queryset = self.fields["tags"].queryset.select_related("board")
+
+        if board is not None:
+            task_list_queryset = task_list_queryset.filter(board=board)
+            tag_queryset = tag_queryset.filter(board=board)
+
+        self.fields["task_list"].queryset = task_list_queryset.order_by("board__name", "position", "name")
         self.fields["assignee"].queryset = self.fields["assignee"].queryset.order_by("username")
-        self.fields["tags"].queryset = self.fields["tags"].queryset.select_related("board").order_by(
-            "board__name",
-            "name",
-        )
+        self.fields["tags"].queryset = tag_queryset.order_by("board__name", "name")

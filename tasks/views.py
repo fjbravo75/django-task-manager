@@ -58,24 +58,31 @@ def task_detail(request, pk):
     return render(request, 'tasks/task_detail.html', {'task': task})
 
 
-def task_create(request):
+def task_create(request, board_pk=None):
+    board = None
+    if board_pk is not None:
+        board = get_object_or_404(Board.objects.prefetch_related("task_lists"), pk=board_pk)
+
     if request.method == 'POST':
-        form = TaskForm(request.POST)
+        form = TaskForm(request.POST, board=board)
         if form.is_valid():
             task = form.save()
             return redirect('board_detail', pk=task.task_list.board_id)
     else:
-        form = TaskForm()
+        form = TaskForm(board=board)
 
     context = {
         'form': form,
+        'board': board,
         'page_title': 'Nueva tarea',
         'screen_title': 'Nueva tarea',
-        'screen_subtitle': 'Crea una nueva tarea y asígnala a una lista existente.',
+        'screen_subtitle': 'Crea una nueva tarea dentro del tablero actual.' if board else 'Crea una nueva tarea y asígnala a una lista existente.',
         'panel_title': 'Detalles de la tarea',
-        'panel_subtitle': 'Completa los campos principales para guardar la tarea dentro de una lista del tablero.',
+        'panel_subtitle': 'Selecciona una de las listas del tablero actual para guardar la tarea.' if board else 'Completa los campos principales para guardar la tarea dentro de una lista del tablero.',
         'submit_label': 'Guardar tarea',
-        'cancel_url': 'board_list',
+        'cancel_url': 'board_detail' if board else 'board_list',
+        'cancel_url_kwargs': {'pk': board.pk} if board else None,
+        'task_list_count': form.fields["task_list"].queryset.count(),
     }
     return render(request, 'tasks/task_form.html', context)
 

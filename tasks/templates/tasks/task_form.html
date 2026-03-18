@@ -8,9 +8,16 @@
             <div class="min-w-0 space-y-2">
                 <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{{ screen_title }}</h1>
                 <p class="max-w-2xl text-sm leading-6 text-slate-600">{{ screen_subtitle }}</p>
+                {% if board %}
+                    <p class="text-sm font-medium text-slate-500">Tablero: {{ board.name }}</p>
+                {% endif %}
             </div>
 
-            <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'board_list' %}">Volver a tableros</a>
+            {% if board %}
+                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'board_detail' board.pk %}">Volver al tablero</a>
+            {% else %}
+                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'board_list' %}">Volver a tableros</a>
+            {% endif %}
         </header>
 
         <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
@@ -44,10 +51,20 @@
                     <div class="grid gap-2">
                         <label for="{{ form.task_list.id_for_label }}">{{ form.task_list.label }}</label>
                         {{ form.task_list }}
-                        <p class="text-sm leading-6 text-slate-500">La lista determina el estado actual de la tarea en esta fase del proyecto.</p>
+                        {% if board %}
+                            <p class="text-sm leading-6 text-slate-500">Solo se muestran listas del tablero actual.</p>
+                        {% else %}
+                            <p class="text-sm leading-6 text-slate-500">La lista determina el estado actual de la tarea en esta fase del proyecto.</p>
+                        {% endif %}
                         {{ form.task_list.errors }}
                     </div>
                 </div>
+
+                {% if board and task_list_count == 0 %}
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        Este tablero no tiene listas disponibles. Crea primero las listas desde el admin para poder añadir tareas.
+                    </div>
+                {% endif %}
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="grid gap-2">
@@ -83,7 +100,7 @@
                     {% else %}
                         <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url cancel_url %}">Cancelar</a>
                     {% endif %}
-                    <button class="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">{{ submit_label }}</button>
+                    <button class="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400" type="submit" {% if board and task_list_count == 0 %}disabled{% endif %}>{{ submit_label }}</button>
                 </div>
             </form>
         </section>
