@@ -59,8 +59,9 @@
                                                 {% endif %}
                                             </div>
 
-                                            <div class="mt-4">
+                                            <div class="mt-4 flex items-center gap-4">
                                                 <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'task_detail' task.pk %}">Ver detalle</a>
+                                                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'task_update' task.pk %}">Editar</a>
                                             </div>
                                         </article>
                                     {% endfor %}
