@@ -21,7 +21,7 @@
             <div class="mb-6 border-b border-slate-200 pb-4">
                 <h2 class="text-lg font-semibold text-slate-950">Detalle de la tarea</h2>
                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                    Información actual registrada para esta tarea.
+                    Información actual registrada para esta tarea dentro de la estructura vigente.
                 </p>
             </div>
 
@@ -38,13 +38,43 @@
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                        <dt class="text-sm font-medium text-slate-600">Estado</dt>
-                        <dd class="text-sm leading-6 text-slate-900">{{ task.get_status_display }}</dd>
+                        <dt class="text-sm font-medium text-slate-600">Lista actual</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.task_list.name }}</dd>
                     </div>
 
                     <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                         <dt class="text-sm font-medium text-slate-600">Prioridad</dt>
                         <dd class="text-sm leading-6 text-slate-900">{{ task.get_priority_display }}</dd>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Tablero</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.task_list.board.name }}</dd>
+                    </div>
+
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Asignada a</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{% if task.assignee %}{{ task.assignee.username }}{% else %}Sin asignar.{% endif %}</dd>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Fecha límite</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{% if task.due_date %}{{ task.due_date|date:"d/m/Y" }}{% else %}Sin fecha límite.{% endif %}</dd>
+                    </div>
+
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Etiquetas</dt>
+                        <dd class="text-sm leading-6 text-slate-900">
+                            {% if task.tags.all %}
+                                {{ task.tags.all|join:", " }}
+                            {% else %}
+                                Sin etiquetas.
+                            {% endif %}
+                        </dd>
                     </div>
                 </div>
 
