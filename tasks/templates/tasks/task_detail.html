@@ -13,7 +13,7 @@
             <div class="flex flex-wrap items-center gap-3">
                 <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'task_update' task.pk %}">Editar tarea</a>
                 <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'task_delete' task.pk %}">Eliminar tarea</a>
-                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'task_list' %}">Volver al listado</a>
+                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'board_detail' task.task_list.board.pk %}">Volver al tablero</a>
             </div>
         </header>
 

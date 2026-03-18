@@ -1,8 +1,41 @@
 from django.core.paginator import Paginator
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 
 from tasks.forms import TaskForm
-from tasks.models import Task
+from tasks.models import Board, Task, TaskList
+
+
+def board_list(request):
+    boards = (
+        Board.objects.select_related("owner")
+        .prefetch_related(
+            Prefetch(
+                "task_lists",
+                queryset=TaskList.objects.order_by("position", "pk"),
+            )
+        )
+        .order_by("name", "pk")
+    )
+    return render(request, "tasks/board_list.html", {"boards": boards})
+
+
+def board_detail(request, pk):
+    board = get_object_or_404(
+        Board.objects.select_related("owner").prefetch_related(
+            Prefetch(
+                "task_lists",
+                queryset=TaskList.objects.prefetch_related(
+                    Prefetch(
+                        "tasks",
+                        queryset=Task.objects.select_related("assignee").prefetch_related("tags").order_by("pk"),
+                    )
+                ).order_by("position", "pk"),
+            )
+        ),
+        pk=pk,
+    )
+    return render(request, "tasks/board_detail.html", {"board": board})
 
 
 def task_list(request):
@@ -29,8 +62,8 @@ def task_create(request):
     if request.method == 'POST':
         form = TaskForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('task_list')
+            task = form.save()
+            return redirect('board_detail', pk=task.task_list.board_id)
     else:
         form = TaskForm()
 
@@ -42,13 +75,13 @@ def task_create(request):
         'panel_title': 'Detalles de la tarea',
         'panel_subtitle': 'Completa los campos principales para guardar la tarea dentro de una lista del tablero.',
         'submit_label': 'Guardar tarea',
-        'cancel_url': 'task_list',
+        'cancel_url': 'board_list',
     }
     return render(request, 'tasks/task_form.html', context)
 
 
 def task_update(request, pk):
-    task = get_object_or_404(Task, pk=pk)
+    task = get_object_or_404(Task.objects.select_related("task_list", "task_list__board"), pk=pk)
 
     if request.method == 'POST':
         form = TaskForm(request.POST, instance=task)
@@ -74,11 +107,12 @@ def task_update(request, pk):
 
 
 def task_delete(request, pk):
-    task = get_object_or_404(Task, pk=pk)
+    task = get_object_or_404(Task.objects.select_related("task_list", "task_list__board"), pk=pk)
 
     if request.method == 'POST':
+        board_id = task.task_list.board_id
         task.delete()
-        return redirect('task_list')
+        return redirect('board_detail', pk=board_id)
 
     context = {
         'task': task,

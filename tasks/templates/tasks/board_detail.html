@@ -1,0 +1,86 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}{{ board.name }}{% endblock %}
+
+{% block content %}
+    <section class="space-y-6">
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0 space-y-2">
+                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'board_list' %}">Volver a tableros</a>
+                <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{{ board.name }}</h1>
+                <p class="max-w-3xl text-sm leading-6 text-slate-600">
+                    {% if board.description %}{{ board.description }}{% else %}Vista simple del tablero y sus listas dentro del flujo server-rendered actual.{% endif %}
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'task_create' %}">Nueva tarea</a>
+                <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'task_list' %}">Ver todas las tareas</a>
+            </div>
+        </header>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
+            <div class="mb-6 border-b border-slate-200 pb-4">
+                <h2 class="text-lg font-semibold text-slate-950">Resumen del tablero</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                    Propietario: {{ board.owner.username }}. Las tareas ya se muestran agrupadas por lista o columna.
+                </p>
+            </div>
+
+            {% if board.task_lists.all %}
+                <div class="grid gap-4 xl:grid-cols-3">
+                    {% for task_list in board.task_lists.all %}
+                        <section class="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                            <header class="space-y-1 border-b border-slate-200 pb-3">
+                                <h3 class="text-base font-semibold text-slate-950">{{ task_list.name }}</h3>
+                                <p class="text-sm text-slate-500">{{ task_list.tasks.count }} tarea{{ task_list.tasks.count|pluralize:"s" }}</p>
+                            </header>
+
+                            <div class="mt-4 flex-1 space-y-3">
+                                {% if task_list.tasks.all %}
+                                    {% for task in task_list.tasks.all %}
+                                        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/70">
+                                            <div class="space-y-2">
+                                                <h4 class="text-sm font-semibold leading-6 text-slate-950">
+                                                    <a class="transition hover:text-slate-700" href="{% url 'task_detail' task.pk %}">{{ task.title }}</a>
+                                                </h4>
+                                                {% if task.description %}
+                                                    <p class="text-sm leading-6 text-slate-600">{{ task.description }}</p>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="mt-3 flex flex-wrap items-center gap-2">
+                                                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ task.get_priority_display }}</span>
+                                                {% if task.assignee %}
+                                                    <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">{{ task.assignee.username }}</span>
+                                                {% endif %}
+                                                {% if task.due_date %}
+                                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">{{ task.due_date|date:"d/m/Y" }}</span>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="mt-4">
+                                                <a class="text-sm font-medium text-slate-600 transition hover:text-slate-950" href="{% url 'task_detail' task.pk %}">Ver detalle</a>
+                                            </div>
+                                        </article>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center">
+                                        <p class="text-sm leading-6 text-slate-500">Esta lista todavía no tiene tareas.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </section>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                    <h3 class="text-lg font-semibold text-slate-950">Este tablero todavía no tiene listas</h3>
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+                        La base del modelo ya las soporta, pero este microbloque no abre todavía su gestión visible.
+                    </p>
+                </div>
+            {% endif %}
+        </section>
+    </section>
+{% endblock %}
