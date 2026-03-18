@@ -17,19 +17,19 @@ Bloques ya cerrados y consolidados en la rama principal:
 
 ## Bloque activo
 
-El bloque visual inmediato de pantallas de `Board` queda cerrado. El foco activo vuelve al cierre del núcleo funcional pendiente sin reabrir iteración de diseño fino.
+El bloque visual inmediato de pantallas de `Board` queda cerrado. El foco activo pasa al siguiente frente del núcleo funcional pendiente: autenticación básica integrada.
 
 ## Siguiente paso exacto
 
 El siguiente paso correcto ya no es seguir puliendo la maquetación de `Board`.
 
-El siguiente microbloque exacto debe empezar con inspección y planificación previa del siguiente frente funcional del núcleo aún abierto, evitando tocar código hasta fijar el orden.
+El siguiente microbloque exacto ya queda decidido: registro + login/logout + protección básica de vistas visibles, a ejecutar cuando el entorno permita validación real de Django.
 
 Ese bloque debe centrarse en:
 
-1. elegir el siguiente frente funcional prioritario entre autenticación o gestión visible de tableros/listas
-2. mantener `Board` como contexto principal del producto
-3. no reabrir el bloque visual salvo corrección concreta detectada por revisión manual
+1. introducir registro, login y logout con la base nativa de Django
+2. proteger de forma básica las vistas visibles actuales de `Board` y `Task`
+3. dejar para una fase posterior el filtrado fino por `owner` o `members`, sin abrir todavía permisos complejos
 
 ## Restricciones operativas vigentes
 
@@ -59,11 +59,14 @@ Todavía no están cerrados autenticación funcional, gestión visible de tabler
 
 ## Archivos previsiblemente implicados en la siguiente fase
 
+- `config/settings.py`
+- `config/urls.py`
 - `tasks/views.py`
 - `tasks/urls.py`
 - `tasks/forms.py`
+- plantillas de autenticación
 - templates de `tasks/board_*` y `tasks/task_*`
 
 ## Nota de uso
 
-Este archivo resume el estado operativo real del repo tras cerrar el bloque visual local de `Board` y dejar las pantallas principales ya suficientemente presentables para seguir con núcleo funcional.
+Este archivo resume el estado operativo real del repo tras cerrar el bloque visual local de `Board` y dejar decidido que el siguiente microbloque prioritario es autenticación básica integrada.

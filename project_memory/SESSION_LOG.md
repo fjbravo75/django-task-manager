@@ -294,3 +294,24 @@ Las pantallas principales de `Board` quedan suficientemente presentables para co
 
 ### Pendiente inmediato
 Inspeccionar y planificar el siguiente microbloque funcional del núcleo aún abierto, sin reabrir el bloque visual salvo corrección concreta.
+
+---
+
+## 2026-03-18 — Inspección previa del microbloque de autenticación
+
+### Objetivo
+Confirmar el estado real del repo respecto a autenticación y fijar el siguiente microbloque funcional con el menor riesgo posible.
+
+### Trabajo realizado
+- Se revisó la base actual de Django auth en settings, URLs, vistas, modelos, formularios y plantillas visibles.
+- Se confirmó que la base técnica de auth existe, pero que no hay todavía login, logout, registro ni protección de vistas.
+- Se confirmó que las vistas visibles actuales siguen siendo públicas.
+- Se detectó relación real con usuario en el modelo y en la UI mediante `Board.owner`, `Board.members` y `Task.assignee`.
+- Se dejó decidido como siguiente microbloque: registro + login/logout + protección básica.
+- No se ejecutó código en esta sesión porque el entorno activo no permitía validación real de Django.
+
+### Resultado
+Queda cerrada la planificación previa del siguiente frente funcional sin abrir todavía implementación.
+
+### Pendiente inmediato
+Arrancar la próxima sesión con implementación de autenticación básica integrada en cuanto el entorno permita validar con Django.
