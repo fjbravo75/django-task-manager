@@ -29,6 +29,18 @@
                     <dt class="text-sm font-medium text-slate-600">Descripción</dt>
                     <dd class="break-words text-sm leading-6 text-slate-900">{% if task.description %}{{ task.description }}{% else %}Sin descripción.{% endif %}</dd>
                 </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Lista actual</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.task_list.name }}</dd>
+                    </div>
+
+                    <div class="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <dt class="text-sm font-medium text-slate-600">Tablero</dt>
+                        <dd class="text-sm leading-6 text-slate-900">{{ task.task_list.board.name }}</dd>
+                    </div>
+                </div>
             </dl>
 
             <form method="post" class="mt-6 grid gap-5">
