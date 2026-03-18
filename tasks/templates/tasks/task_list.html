@@ -1,6 +1,6 @@
 {% extends 'tasks/base.html' %}
 
-{% block title %}Listado de tareas{% endblock %}
+{% block title %}Todas las tareas{% endblock %}
 
 {% block content %}
     <section class="space-y-6">
@@ -8,11 +8,14 @@
             <div class="min-w-0 space-y-2">
                 <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Listado de tareas</h1>
                 <p class="max-w-2xl text-sm leading-6 text-slate-600">
-                    Consulta las tareas registradas y accede al formulario para crear nuevas.
+                    Vista transitoria de todas las tareas. La navegación principal del proyecto ya entra por tableros.
                 </p>
             </div>
 
-            <a class="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" href="{% url 'task_create' %}">Nueva tarea</a>
+            <div class="flex flex-wrap items-center gap-3">
+                <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100" href="{% url 'board_list' %}">Ver tableros</a>
+                <a class="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" href="{% url 'task_create' %}">Nueva tarea</a>
+            </div>
         </header>
 
         <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
