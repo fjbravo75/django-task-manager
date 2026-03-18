@@ -5,6 +5,7 @@ from tasks.views import board_detail, board_list, task_create, task_delete, task
 urlpatterns = [
     path("", board_list, name="board_list"),
     path("boards/<int:pk>/", board_detail, name="board_detail"),
+    path("boards/<int:board_pk>/tasks/create/", task_create, name="board_task_create"),
     path("tasks/", task_list, name="task_list"),
     path("tasks/create/", task_create, name="task_create"),
     path("tasks/<int:pk>/", task_detail, name="task_detail"),
