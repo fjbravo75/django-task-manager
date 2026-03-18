@@ -1,33 +1,90 @@
-# CURRENT_CONTEXT
+# CURRENT_CONTEXT.md
 
-## Proyecto
-django-task-manager
+## Estado técnico actual
 
-## Estado actual
-El repositorio local está asentado con Git y sincronizado con origin/main. La app tasks mantiene fuera del admin listado, alta básica, detalle, edición y borrado de tarea con confirmación previa. El flujo visible actual cubre ya el CRUD básico fuera del admin: listar, crear, entrar al detalle, editar una tarea existente, iniciar borrado desde interfaz, confirmar por POST, eliminar y volver al listado. La capa visible actual del CRUD quedó integrada sobre Tailwind CSS por CLI simple, con una base local de plantillas en tasks, CSS de entrada dedicado y CSS compilado servido desde los estáticos de la app. Listado, formulario, detalle y confirmación de borrado comparten ahora una presentación más sobria, uniforme y enseñable para portfolio. El listado visible de tareas fuera del admin ya dispone de paginación simple funcional y validada. La vista del listado ordena las tareas por `pk`, utiliza `Paginator` de Django y muestra 5 tareas por página. La navegación entre páginas se resuelve mediante query string (`?page=`) y queda protegida frente a valores inválidos o fuera de rango mediante `get_page()`.
+La base visible inicial del proyecto ya está construida y validada en local.
 
-La presentación visual final de la paginación también ha quedado afinada y validada en navegador. El bloque se muestra centrado, en una sola línea, con navegación en español (`Anterior`, `Página X de Y`, `Siguiente`), sin botones innecesarios y con una jerarquía visual coherente con el resto de la interfaz.
+Bloques ya cerrados en la versión actual del repo:
+
+- listado de tareas
+- alta de tareas
+- detalle de tarea
+- edición de tarea
+- borrado de tarea
+- refinado visual base
+- integración contenida de Tailwind
+- paginación simple
+
+El proyecto no debe seguir tratándose como un CRUD básico en expansión. Esa fase base ya está cerrada.
 
 ## Bloque activo
-Microbloque de paginación simple del listado cerrado.
+
+Rediseño estructural previo a la siguiente evolución técnica del proyecto.
+
+Todavía no debe ejecutarse una ampliación grande de código sin planificación previa.
 
 ## Siguiente paso exacto
-Implementar edición de tareas fuera del admin, reutilizando el formulario ya existente y manteniendo el mismo criterio de alcance corto, validación real y presentación coherente.
 
-## Restricciones vigentes
-- No abrir todavía borrado ni autenticación.
-- No abrir nuevos frentes de configuración salvo necesidad real.
-- No añadir librerías ni complejidad innecesaria.
-- Priorizar funcionalidad visible, coherencia general y presentabilidad suficiente sobre perfeccionismo gráfico.
-- Usar prompts cerrados y concretos al trabajar con Codex.
+Antes de modificar modelos, vistas, URLs o templates para la nueva fase del proyecto, hay que definir con precisión la siguiente versión objetivo.
 
-## Archivos foco del bloque actual
-- tasks/views.py
-- tasks/templates/tasks/task_list.html
-- tasks/static/tasks/styles.css
+Si la tarea es estructural o el prompt actual pide planificación, no modificar código todavía.
 
-## Último commit asociado
-- `f166773` — `Add pagination to task list`
+En esa planificación debe quedar cerrado, como mínimo:
 
-## Última actualización
-2026-03-17
+1. modelo de datos objetivo
+2. alcance mínimo de la siguiente fase
+3. orden de implementación por fases pequeñas
+4. dependencias y riesgos principales
+
+## Estructura objetivo de la siguiente fase
+
+La siguiente evolución del proyecto debe orientarse a una estructura basada en estas entidades:
+
+- `Board`
+- `TaskList`
+- `Task`
+- `Tag`
+- relación clara con `User`
+
+## Restricciones operativas vigentes
+
+- Mantener aplicación Django server-rendered.
+- No abrir frontend separado.
+- No introducir React, Vue, websockets ni complejidad de frontend innecesaria.
+- No abrir extras mientras el núcleo principal de la siguiente fase no esté sólido.
+- Si una tarea afecta varias capas o exige rediseño, primero debe resolverse por planificación.
+- No continuar ampliando la versión antigua del CRUD como si siguiera siendo el bloque principal.
+
+## Núcleo funcional objetivo de la siguiente fase
+
+La evolución del proyecto debe orientarse, por fases, a este núcleo:
+
+- registro
+- login
+- logout
+- tableros
+- listas o columnas
+- tareas integradas en esa estructura
+- asignación de tareas a usuarios
+- prioridad
+- etiquetas
+- fechas límite
+- movimiento de tareas entre listas o columnas
+
+## Archivos previsiblemente implicados en la siguiente fase
+
+Estos archivos o zonas del repo son los candidatos más probables para inspección o cambio en la siguiente etapa, solo si el prompt lo autoriza:
+
+- `tasks/models.py`
+- `tasks/views.py`
+- `tasks/urls.py`
+- templates de `tasks/`
+- migraciones nuevas si la tarea lo requiere
+
+## Nota de uso
+
+Este archivo describe el estado operativo actual del repo.
+
+No autoriza cambios por sí solo.
+
+La tarea concreta, el alcance y los archivos que pueden tocarse los define siempre el prompt actual.
