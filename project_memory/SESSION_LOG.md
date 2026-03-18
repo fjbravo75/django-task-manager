@@ -204,3 +204,40 @@ La memoria local pasa a prepararse para una nueva fase del proyecto: evolución 
 
 ### Pendiente inmediato
 Definir con precisión, antes de ejecutar código, la siguiente versión objetivo del proyecto: modelo de datos, alcance mínimo, fases, dependencias y riesgos.
+
+---
+
+## 2026-03-18 — Base kanban mínima y alineación del flujo heredado
+
+### Objetivo
+Cerrar la base relacional mínima tipo kanban y alinear el flujo visible heredado de tareas con el nuevo modelo sin abrir todavía tableros visibles completos ni autenticación.
+
+### Trabajo realizado
+- Se introdujeron `Board`, `TaskList` y `Tag`.
+- Se adaptó `Task` al nuevo esquema relacional con `task_list`, `assignee`, `tags` y `due_date`.
+- Se consolidó la transición para que `TaskList` pase a ser la fuente real de estado y `status` deje de sostener el flujo.
+- Se ajustó el admin para validar con comodidad la nueva base relacional.
+- Se generó y aplicó la migración de transición preservando las tareas existentes.
+- Se realineó el CRUD visible heredado de tareas para listar, crear, ver, editar y borrar sobre el nuevo modelo.
+- Se sustituyó en la capa visible la dependencia de `status` por la lista o columna asociada.
+- Se mantuvo el enfoque server-rendered y la base visual ya existente.
+- Se validó de forma real con `makemigrations --check --dry-run`, `migrate`, `check` y una prueba funcional mínima del flujo heredado.
+- Los dos microbloques quedaron cerrados con commit y push reales a `main` / `origin/main`.
+
+### Archivos tocados
+- `tasks/models.py`
+- `tasks/admin.py`
+- `tasks/migrations/0002_kanban_base.py`
+- `tasks/views.py`
+- `tasks/forms.py`
+- `tasks/templates/tasks/task_list.html`
+- `tasks/templates/tasks/task_detail.html`
+- `tasks/templates/tasks/task_form.html`
+- `tasks/templates/tasks/task_confirm_delete.html`
+- `db.sqlite3`
+
+### Resultado
+El repo deja cerrada una base coherente para seguir evolucionando hacia la versión tipo kanban: la estructura relacional mínima ya existe y el flujo visible heredado vuelve a ser usable sobre esa base.
+
+### Pendiente inmediato
+Mover el centro de navegación hacia `Board` como contexto principal, dejando de depender del listado global plano de tareas, sin abrir todavía autenticación completa ni extras.

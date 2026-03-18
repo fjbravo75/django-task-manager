@@ -229,3 +229,19 @@ El proyecto ya no debe crecer sobre el CRUD antiguo con microextensiones aislada
 
 ### Estado
 Vigente
+
+## 2026-03-18 — `TaskList` pasa a ser la fuente real de estado de `Task`
+
+### Decisión
+En la nueva base del proyecto, `Task` ya no debe apoyarse en un campo `status` como fuente real de estado. Ese papel queda asumido por `TaskList`.
+
+### Motivo
+El refactor de modelo ya cerró la transición hacia una estructura tipo kanban mínima y conviene fijar esta decisión para no reintroducir incoherencias en sesiones futuras.
+
+### Impacto práctico
+- No duplicar estado entre `Task.status` y `Task.task_list`.
+- Las vistas, formularios y plantillas deben leer el estado visible desde la lista o columna asociada.
+- Los siguientes bloques deben construir navegación y flujo alrededor de `Board` y `TaskList`, no alrededor de un CRUD plano de estados.
+
+### Estado
+Vigente

@@ -2,89 +2,60 @@
 
 ## Estado técnico actual
 
-La base visible inicial del proyecto ya está construida y validada en local.
+La base relacional mínima tipo kanban ya existe y está validada en el repo.
 
-Bloques ya cerrados en la versión actual del repo:
+Bloques cerrados y ya integrados en `main`:
 
-- listado de tareas
-- alta de tareas
-- detalle de tarea
-- edición de tarea
-- borrado de tarea
-- refinado visual base
-- integración contenida de Tailwind
-- paginación simple
-
-El proyecto no debe seguir tratándose como un CRUD básico en expansión. Esa fase base ya está cerrada.
+- refactor de modelo hacia `Board`, `TaskList`, `Tag` y `Task` relacional
+- transición de `Task` desde `status` a `task_list` como fuente real de estado
+- alineación del CRUD visible heredado de tareas con el nuevo modelo
+- validación real con migraciones, `migrate`, `check` y prueba funcional mínima del flujo heredado
+- commit y push reales de los dos microbloques ya cerrados
 
 ## Bloque activo
 
-Rediseño estructural previo a la siguiente evolución técnica del proyecto.
-
-Todavía no debe ejecutarse una ampliación grande de código sin planificación previa.
+Transición del centro de navegación desde el listado global plano de tareas hacia `Board` como contexto principal.
 
 ## Siguiente paso exacto
 
-Antes de modificar modelos, vistas, URLs o templates para la nueva fase del proyecto, hay que definir con precisión la siguiente versión objetivo.
+El siguiente microbloque correcto es empezar a mover la navegación y el flujo visible hacia `Board` como contexto principal, dejando de depender del listado global plano de tareas.
 
-Si la tarea es estructural o el prompt actual pide planificación, no modificar código todavía.
+En ese bloque debe abordarse, como mínimo:
 
-En esa planificación debe quedar cerrado, como mínimo:
-
-1. modelo de datos objetivo
-2. alcance mínimo de la siguiente fase
-3. orden de implementación por fases pequeñas
-4. dependencias y riesgos principales
-
-## Estructura objetivo de la siguiente fase
-
-La siguiente evolución del proyecto debe orientarse a una estructura basada en estas entidades:
-
-- `Board`
-- `TaskList`
-- `Task`
-- `Tag`
-- relación clara con `User`
+1. una entrada visible basada en tableros
+2. una vista de tablero simple como contexto de listas y tareas
+3. continuidad del flujo actual sin abrir todavía autenticación completa ni extras
 
 ## Restricciones operativas vigentes
 
 - Mantener aplicación Django server-rendered.
 - No abrir frontend separado.
 - No introducir React, Vue, websockets ni complejidad de frontend innecesaria.
-- No abrir extras mientras el núcleo principal de la siguiente fase no esté sólido.
-- Si una tarea afecta varias capas o exige rediseño, primero debe resolverse por planificación.
-- No continuar ampliando la versión antigua del CRUD como si siguiera siendo el bloque principal.
+- No abrir extras mientras el núcleo principal siga incompleto.
+- No reabrir el refactor de modelo ya cerrado salvo incidencia real.
+- No reintroducir `status` como fuente de estado de `Task`.
 
-## Núcleo funcional objetivo de la siguiente fase
+## Núcleo funcional ya sostenido por el repo
 
-La evolución del proyecto debe orientarse, por fases, a este núcleo:
+La base actual ya sostiene estas piezas del núcleo:
 
-- registro
-- login
-- logout
-- tableros
-- listas o columnas
+- tableros a nivel de modelo
+- listas o columnas a nivel de modelo
 - tareas integradas en esa estructura
-- asignación de tareas a usuarios
 - prioridad
 - etiquetas
 - fechas límite
-- movimiento de tareas entre listas o columnas
+- asignación opcional a usuario
+
+Todavía no está cerrada la navegación visible centrada en tableros ni la autenticación funcional del producto.
 
 ## Archivos previsiblemente implicados en la siguiente fase
 
-Estos archivos o zonas del repo son los candidatos más probables para inspección o cambio en la siguiente etapa, solo si el prompt lo autoriza:
-
-- `tasks/models.py`
 - `tasks/views.py`
 - `tasks/urls.py`
 - templates de `tasks/`
-- migraciones nuevas si la tarea lo requiere
+- `config/urls.py` solo si el flujo visible lo exige
 
 ## Nota de uso
 
-Este archivo describe el estado operativo actual del repo.
-
-No autoriza cambios por sí solo.
-
-La tarea concreta, el alcance y los archivos que pueden tocarse los define siempre el prompt actual.
+Este archivo resume el estado operativo real actual del repo tras los dos microbloques ya cerrados.
