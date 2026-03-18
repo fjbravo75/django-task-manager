@@ -245,3 +245,19 @@ El refactor de modelo ya cerró la transición hacia una estructura tipo kanban 
 
 ### Estado
 Vigente
+
+## 2026-03-18 — `Board` pasa a ser el contexto principal visible del producto
+
+### Decisión
+La navegación principal del producto debe entrar por `Board`, y los flujos visibles de tareas deben subordinarse progresivamente a ese contexto.
+
+### Motivo
+Los microbloques ya cerrados consolidaron una transición real desde el CRUD plano de tareas hacia una estructura centrada en tableros.
+
+### Impacto práctico
+- La home ya no debe volver a depender del listado global plano de tareas.
+- La creación y edición de tareas deben respetar el `Board` real de trabajo.
+- Las rutas heredadas globales de tareas pueden sobrevivir como soporte secundario, pero no deben volver a ser el centro del producto.
+
+### Estado
+Vigente

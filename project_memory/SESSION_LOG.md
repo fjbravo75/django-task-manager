@@ -241,3 +241,25 @@ El repo deja cerrada una base coherente para seguir evolucionando hacia la versi
 
 ### Pendiente inmediato
 Mover el centro de navegación hacia `Board` como contexto principal, dejando de depender del listado global plano de tareas, sin abrir todavía autenticación completa ni extras.
+
+---
+
+## 2026-03-18 — Consolidación del flujo principal en torno a `Board`
+
+### Objetivo
+Seguir cerrando la transición funcional del producto para que `Board` sea el contexto principal visible y las tareas nazcan y se editen de forma coherente dentro de ese tablero.
+
+### Trabajo realizado
+- La navegación principal pasó a entrar por listado de tableros.
+- Se añadió una vista simple de `Board` con sus listas y tareas.
+- La creación de tareas quedó contextualizada desde `Board`.
+- La edición de tareas quedó contextualizada al `Board` real de cada tarea.
+- Se evitó en el flujo contextual mover tareas a listas de otros tableros.
+- Se mantuvieron rutas heredadas globales de tareas solo como soporte secundario.
+- Se validó de forma real con `check` y pruebas funcionales mínimas de navegación, creación y edición contextual.
+
+### Resultado
+El repo ya no depende del listado global plano de tareas como centro del producto. `Board` queda consolidado como contexto principal visible y las tareas ya se crean y editan con coherencia básica respecto a su tablero.
+
+### Pendiente inmediato
+Mejorar las acciones visibles directas desde `Board` hacia cada tarea, para ver y editar desde el propio tablero con menos dependencia del flujo heredado global.

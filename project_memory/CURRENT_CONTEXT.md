@@ -2,29 +2,30 @@
 
 ## Estado técnico actual
 
-La base relacional mínima tipo kanban ya existe y está validada en el repo.
+La base relacional mínima tipo kanban ya está implantada y validada en el repo.
 
-Bloques cerrados y ya integrados en `main`:
+Bloques ya cerrados y consolidados en la rama principal:
 
 - refactor de modelo hacia `Board`, `TaskList`, `Tag` y `Task` relacional
 - transición de `Task` desde `status` a `task_list` como fuente real de estado
-- alineación del CRUD visible heredado de tareas con el nuevo modelo
-- validación real con migraciones, `migrate`, `check` y prueba funcional mínima del flujo heredado
-- commit y push reales de los dos microbloques ya cerrados
+- alineación del flujo heredado de tareas con el nuevo modelo
+- navegación principal ya centrada en `Board`
+- creación de tareas contextualizada desde `Board`
+- edición de tareas contextualizada al `Board` real, sin permitir moverlas a listas de otros tableros por el flujo contextual
 
 ## Bloque activo
 
-Transición del centro de navegación desde el listado global plano de tareas hacia `Board` como contexto principal.
+Refuerzo del flujo principal centrado en `Board` y reducción progresiva de dependencia del flujo heredado global de tareas.
 
 ## Siguiente paso exacto
 
-El siguiente microbloque correcto es empezar a mover la navegación y el flujo visible hacia `Board` como contexto principal, dejando de depender del listado global plano de tareas.
+El siguiente microbloque correcto es mejorar las acciones visibles directas desde `Board` hacia cada tarea, para ver y editar desde el propio tablero con menos dependencia del flujo heredado global.
 
-En ese bloque debe abordarse, como mínimo:
+Ese bloque debe centrarse en:
 
-1. una entrada visible basada en tableros
-2. una vista de tablero simple como contexto de listas y tareas
-3. continuidad del flujo actual sin abrir todavía autenticación completa ni extras
+1. accesos más directos desde el tablero a cada tarea
+2. continuidad clara entre vista de tablero, detalle y edición
+3. mantener las rutas heredadas solo como soporte secundario, no como centro del producto
 
 ## Restricciones operativas vigentes
 
@@ -34,28 +35,29 @@ En ese bloque debe abordarse, como mínimo:
 - No abrir extras mientras el núcleo principal siga incompleto.
 - No reabrir el refactor de modelo ya cerrado salvo incidencia real.
 - No reintroducir `status` como fuente de estado de `Task`.
+- No devolver el centro visible del producto al listado global plano de tareas.
 
 ## Núcleo funcional ya sostenido por el repo
 
 La base actual ya sostiene estas piezas del núcleo:
 
-- tableros a nivel de modelo
-- listas o columnas a nivel de modelo
+- tableros a nivel de modelo y de navegación principal
+- listas o columnas a nivel de modelo y de visualización básica
 - tareas integradas en esa estructura
+- creación y edición de tareas coherentes con el contexto del tablero
 - prioridad
 - etiquetas
 - fechas límite
 - asignación opcional a usuario
 
-Todavía no está cerrada la navegación visible centrada en tableros ni la autenticación funcional del producto.
+Todavía no están cerrados autenticación funcional, gestión visible de tableros/listas ni una experiencia kanban más rica.
 
 ## Archivos previsiblemente implicados en la siguiente fase
 
 - `tasks/views.py`
 - `tasks/urls.py`
-- templates de `tasks/`
-- `config/urls.py` solo si el flujo visible lo exige
+- templates de `tasks/board_*` y `tasks/task_*`
 
 ## Nota de uso
 
-Este archivo resume el estado operativo real actual del repo tras los dos microbloques ya cerrados.
+Este archivo resume el estado operativo real del repo tras los microbloques ya consolidados alrededor de `Board`.
