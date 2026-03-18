@@ -89,26 +89,29 @@ def task_create(request, board_pk=None):
 
 def task_update(request, pk):
     task = get_object_or_404(Task.objects.select_related("task_list", "task_list__board"), pk=pk)
+    board = task.task_list.board
 
     if request.method == 'POST':
-        form = TaskForm(request.POST, instance=task)
+        form = TaskForm(request.POST, instance=task, board=board)
         if form.is_valid():
             form.save()
-            return redirect('task_detail', pk=task.pk)
+            return redirect('board_detail', pk=board.pk)
     else:
-        form = TaskForm(instance=task)
+        form = TaskForm(instance=task, board=board)
 
     context = {
         'form': form,
         'task': task,
+        'board': board,
         'page_title': f'Editar {task.title}',
         'screen_title': 'Editar tarea',
-        'screen_subtitle': 'Actualiza la tarea y mueve su lista si hace falta.',
+        'screen_subtitle': 'Actualiza la tarea dentro del tablero actual.',
         'panel_title': 'Editar detalles',
-        'panel_subtitle': 'Modifica los campos necesarios y guarda los cambios en la estructura actual.',
+        'panel_subtitle': 'Solo se muestran listas del tablero al que ya pertenece esta tarea.',
         'submit_label': 'Guardar cambios',
-        'cancel_url': 'task_detail',
-        'cancel_url_kwargs': {'pk': task.pk},
+        'cancel_url': 'board_detail',
+        'cancel_url_kwargs': {'pk': board.pk},
+        'task_list_count': form.fields["task_list"].queryset.count(),
     }
     return render(request, 'tasks/task_form.html', context)
 
