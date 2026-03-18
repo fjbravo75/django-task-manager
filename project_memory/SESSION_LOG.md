@@ -263,3 +263,34 @@ El repo ya no depende del listado global plano de tareas como centro del product
 
 ### Pendiente inmediato
 Mejorar las acciones visibles directas desde `Board` hacia cada tarea, para ver y editar desde el propio tablero con menos dependencia del flujo heredado global.
+
+---
+
+## 2026-03-18 — Cierre visual local de pantallas de `Board` y resincronización de memoria
+
+### Objetivo
+Cerrar el remate visual local pendiente de `board_list` y `board_detail`, dejarlo committeado y volver a alinear la memoria del repo con el estado técnico real.
+
+### Trabajo realizado
+- Se revisó el diff local pendiente del bloque visual de `Board`.
+- Se mantuvo el nuevo layout ampliado en `base.html`, `board_list.html`, `board_detail.html` y el CSS compilado asociado.
+- Se recuperó `board.description` en listado y detalle para evitar regresión de contenido visible.
+- Se confirmó que el bloque visual quedaba acotado a las pantallas principales de `Board`, sin tocar lógica ni abrir trabajo nuevo.
+- Se actualizó `CURRENT_CONTEXT.md` para no dejar como siguiente paso un microbloque ya cerrado.
+- Se añadió decisión explícita para no seguir delegando maquetación fina de estas pantallas en Codex.
+- El bloque quedó cerrado con commit local en `main`, sin push.
+
+### Archivos tocados
+- `tasks/static/tasks/styles.css`
+- `tasks/templates/tasks/base.html`
+- `tasks/templates/tasks/board_list.html`
+- `tasks/templates/tasks/board_detail.html`
+- `project_memory/CURRENT_CONTEXT.md`
+- `project_memory/DECISIONS.md`
+- `project_memory/SESSION_LOG.md`
+
+### Resultado
+Las pantallas principales de `Board` quedan suficientemente presentables para continuar con trabajo de núcleo, y la memoria local vuelve a describir el estado real del repo.
+
+### Pendiente inmediato
+Inspeccionar y planificar el siguiente microbloque funcional del núcleo aún abierto, sin reabrir el bloque visual salvo corrección concreta.

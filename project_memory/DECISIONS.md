@@ -261,3 +261,19 @@ Los microbloques ya cerrados consolidaron una transición real desde el CRUD pla
 
 ### Estado
 Vigente
+
+## 2026-03-18 — No seguir delegando en Codex la maquetación fina de pantallas `Board`
+
+### Decisión
+La maquetación o pulido visual fino de `board_list`, `board_detail` y pantallas equivalentes no debe seguir delegándose en Codex como bloque abierto de diseño.
+
+### Motivo
+En esta fase compensa más usar revisión manual guiada y aplicar cambios concretos y acotados en archivos que prolongar iteración visual dentro de Codex.
+
+### Impacto práctico
+- Los ajustes visuales futuros deben llegar como cambios concretos y delimitados, no como exploración abierta de diseño.
+- Codex puede ejecutar correcciones específicas sobre archivos, pero no debe dirigir el refinado fino de estas pantallas.
+- El trabajo principal vuelve al núcleo funcional pendiente una vez cerrada una base visual suficientemente presentable.
+
+### Estado
+Vigente

@@ -12,20 +12,24 @@ Bloques ya cerrados y consolidados en la rama principal:
 - navegación principal ya centrada en `Board`
 - creación de tareas contextualizada desde `Board`
 - edición de tareas contextualizada al `Board` real, sin permitir moverlas a listas de otros tableros por el flujo contextual
+- acciones directas desde `Board` hacia detalle y edición de tarea
+- pulido visual local de `board_list` y `board_detail` ya integrado en el repo con recuperación de `board.description`
 
 ## Bloque activo
 
-Refuerzo del flujo principal centrado en `Board` y reducción progresiva de dependencia del flujo heredado global de tareas.
+El bloque visual inmediato de pantallas de `Board` queda cerrado. El foco activo vuelve al cierre del núcleo funcional pendiente sin reabrir iteración de diseño fino.
 
 ## Siguiente paso exacto
 
-El siguiente microbloque correcto es mejorar las acciones visibles directas desde `Board` hacia cada tarea, para ver y editar desde el propio tablero con menos dependencia del flujo heredado global.
+El siguiente paso correcto ya no es seguir puliendo la maquetación de `Board`.
+
+El siguiente microbloque exacto debe empezar con inspección y planificación previa del siguiente frente funcional del núcleo aún abierto, evitando tocar código hasta fijar el orden.
 
 Ese bloque debe centrarse en:
 
-1. accesos más directos desde el tablero a cada tarea
-2. continuidad clara entre vista de tablero, detalle y edición
-3. mantener las rutas heredadas solo como soporte secundario, no como centro del producto
+1. elegir el siguiente frente funcional prioritario entre autenticación o gestión visible de tableros/listas
+2. mantener `Board` como contexto principal del producto
+3. no reabrir el bloque visual salvo corrección concreta detectada por revisión manual
 
 ## Restricciones operativas vigentes
 
@@ -36,6 +40,7 @@ Ese bloque debe centrarse en:
 - No reabrir el refactor de modelo ya cerrado salvo incidencia real.
 - No reintroducir `status` como fuente de estado de `Task`.
 - No devolver el centro visible del producto al listado global plano de tareas.
+- No tratar la maquetación fina de estas pantallas como un frente abierto en Codex; para ajustes visuales concretos, usar revisión manual guiada y cambios directos acotados.
 
 ## Núcleo funcional ya sostenido por el repo
 
@@ -56,8 +61,9 @@ Todavía no están cerrados autenticación funcional, gestión visible de tabler
 
 - `tasks/views.py`
 - `tasks/urls.py`
+- `tasks/forms.py`
 - templates de `tasks/board_*` y `tasks/task_*`
 
 ## Nota de uso
 
-Este archivo resume el estado operativo real del repo tras los microbloques ya consolidados alrededor de `Board`.
+Este archivo resume el estado operativo real del repo tras cerrar el bloque visual local de `Board` y dejar las pantallas principales ya suficientemente presentables para seguir con núcleo funcional.
