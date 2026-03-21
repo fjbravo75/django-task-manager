@@ -1,9 +1,26 @@
+from django.contrib.auth import login as auth_login
 from django.core.paginator import Paginator
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import TaskForm
+from tasks.forms import RegisterForm, TaskForm
 from tasks.models import Board, Task, TaskList
+
+
+def register(request):
+    if request.user.is_authenticated:
+        return redirect("board_list")
+
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)
+            return redirect("board_list")
+    else:
+        form = RegisterForm()
+
+    return render(request, "registration/register.html", {"form": form})
 
 
 def board_list(request):
