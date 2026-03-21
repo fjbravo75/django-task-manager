@@ -17,19 +17,23 @@ Bloques ya cerrados y consolidados en la rama principal:
 
 ## Bloque activo
 
-El bloque visual inmediato de pantallas de `Board` queda cerrado. El foco activo pasa al siguiente frente del núcleo funcional pendiente: autenticación básica integrada.
+El arranque de autenticación básica integrada ya queda cerrado a nivel operativo.
+
+Login, logout y registro con inicio automático de sesión quedaron implementados y validados en navegador durante la sesión actual.
+
+La validación real también confirmó una incidencia de coherencia pendiente: un usuario nuevo autenticado sigue viendo tableros ajenos.
 
 ## Siguiente paso exacto
 
 El siguiente paso correcto ya no es seguir puliendo la maquetación de `Board`.
 
-El siguiente microbloque exacto ya queda decidido: registro + login/logout + protección básica de vistas visibles, a ejecutar cuando el entorno permita validación real de Django.
+El siguiente microbloque exacto pasa a ser protección básica coherente por usuario sobre las vistas visibles de `Board` y `Task`.
 
-Ese bloque debe centrarse en:
+El bloque pendiente de autenticación debe centrarse ahora en:
 
-1. introducir registro, login y logout con la base nativa de Django
-2. proteger de forma básica las vistas visibles actuales de `Board` y `Task`
-3. dejar para una fase posterior el filtrado fino por `owner` o `members`, sin abrir todavía permisos complejos
+1. impedir que un usuario autenticado vea por defecto tableros y tareas ajenos
+2. aplicar protección básica coherente con las relaciones a usuario ya existentes en `Board` y `Task`
+3. dejar para una fase posterior permisos avanzados, roles, invitaciones o ACL complejas
 
 ## Restricciones operativas vigentes
 
@@ -40,6 +44,7 @@ Ese bloque debe centrarse en:
 - No reabrir el refactor de modelo ya cerrado salvo incidencia real.
 - No reintroducir `status` como fuente de estado de `Task`.
 - No devolver el centro visible del producto al listado global plano de tareas.
+- No tratar el siguiente bloque como un `login_required` superficial si deja visibles tableros ajenos a cualquier usuario autenticado.
 - No tratar la maquetación fina de estas pantallas como un frente abierto en Codex; para ajustes visuales concretos, usar revisión manual guiada y cambios directos acotados.
 
 ## Núcleo funcional ya sostenido por el repo
@@ -55,7 +60,7 @@ La base actual ya sostiene estas piezas del núcleo:
 - fechas límite
 - asignación opcional a usuario
 
-Todavía no están cerrados autenticación funcional, gestión visible de tableros/listas ni una experiencia kanban más rica.
+Todavía no están cerrados protección básica coherente por usuario, gestión visible de tableros/listas ni una experiencia kanban más rica.
 
 ## Archivos previsiblemente implicados en la siguiente fase
 
@@ -69,4 +74,4 @@ Todavía no están cerrados autenticación funcional, gestión visible de tabler
 
 ## Nota de uso
 
-Este archivo resume el estado operativo real del repo tras cerrar el bloque visual local de `Board` y dejar decidido que el siguiente microbloque prioritario es autenticación básica integrada.
+Este archivo resume el estado operativo real del repo tras cerrar autenticación básica integrada como arranque y dejar preparado como siguiente microbloque la protección básica coherente por usuario sobre boards y tareas visibles.

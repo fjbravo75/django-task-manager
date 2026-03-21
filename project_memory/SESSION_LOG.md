@@ -315,3 +315,23 @@ Queda cerrada la planificación previa del siguiente frente funcional sin abrir 
 
 ### Pendiente inmediato
 Arrancar la próxima sesión con implementación de autenticación básica integrada en cuanto el entorno permita validar con Django.
+
+---
+
+## 2026-03-21 — Cierre operativo de autenticación básica y detección del siguiente bloqueo real
+
+### Objetivo
+Cerrar el arranque de autenticación básica integrada y fijar el siguiente punto correcto de continuidad tras validación real.
+
+### Trabajo realizado
+- Se implementaron login, logout y registro con base nativa de Django.
+- Se validó en navegador el flujo real de login, logout y registro con inicio automático de sesión.
+- Se confirmó que la autenticación básica ya no queda pendiente como arranque del proyecto.
+- La validación real detectó que un usuario nuevo autenticado sigue viendo tableros ajenos.
+- Se reajustó la memoria local para que el siguiente bloque no quede descrito como `login_required` superficial.
+
+### Resultado
+El arranque de autenticación básica queda operativo y el siguiente problema real ya queda identificado: protección básica coherente por usuario sobre boards y tareas visibles.
+
+### Pendiente inmediato
+Implementar protección básica coherente por usuario en vistas visibles de `Board` y `Task`, sin abrir todavía permisos avanzados.

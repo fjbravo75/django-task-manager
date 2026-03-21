@@ -277,3 +277,19 @@ En esta fase compensa más usar revisión manual guiada y aplicar cambios concre
 
 ### Estado
 Vigente
+
+## 2026-03-21 — La siguiente protección de acceso debe ser coherente por usuario
+
+### Decisión
+Tras cerrar y validar login, logout y registro, el siguiente bloque no debe limitarse a añadir `login_required` de forma superficial. La protección inicial de acceso debe impedir que un usuario autenticado vea por defecto tableros y tareas ajenos.
+
+### Motivo
+La validación real en navegador confirmó que un usuario nuevo autenticado sigue viendo tableros ajenos, por lo que autenticación y protección básica no pueden tratarse como si fueran el mismo problema ya resuelto.
+
+### Impacto práctico
+- El siguiente microbloque debe aplicar una protección básica coherente con las relaciones a usuario ya existentes en `Board` y `Task`.
+- No basta con exigir sesión iniciada si eso deja visibles recursos ajenos a cualquier usuario autenticado.
+- Siguen fuera de alcance permisos avanzados, roles, invitaciones y ACL complejas.
+
+### Estado
+Vigente
