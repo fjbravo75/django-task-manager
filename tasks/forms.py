@@ -38,6 +38,7 @@ class TaskForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         board = kwargs.pop("board", None)
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         task_list_queryset = self.fields["task_list"].queryset.select_related("board")
         tag_queryset = self.fields["tags"].queryset.select_related("board")
@@ -45,6 +46,12 @@ class TaskForm(forms.ModelForm):
         if board is not None:
             task_list_queryset = task_list_queryset.filter(board=board)
             tag_queryset = tag_queryset.filter(board=board)
+        elif user is not None and user.is_authenticated:
+            task_list_queryset = task_list_queryset.filter(board__owner=user)
+            tag_queryset = tag_queryset.filter(board__owner=user)
+        else:
+            task_list_queryset = task_list_queryset.none()
+            tag_queryset = tag_queryset.none()
 
         self.fields["task_list"].queryset = task_list_queryset.order_by("board__name", "position", "name")
         self.fields["assignee"].queryset = self.fields["assignee"].queryset.order_by("username")

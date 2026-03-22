@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login
 from django.core.paginator import Paginator
 from django.db.models import Prefetch
@@ -23,9 +24,11 @@ def register(request):
     return render(request, "registration/register.html", {"form": form})
 
 
+@login_required
 def board_list(request):
     boards = (
-        Board.objects.select_related("owner")
+        Board.objects.filter(owner=request.user)
+        .select_related("owner")
         .prefetch_related(
             Prefetch(
                 "task_lists",
@@ -37,9 +40,12 @@ def board_list(request):
     return render(request, "tasks/board_list.html", {"boards": boards})
 
 
+@login_required
 def board_detail(request, pk):
     board = get_object_or_404(
-        Board.objects.select_related("owner").prefetch_related(
+        Board.objects.filter(owner=request.user)
+        .select_related("owner")
+        .prefetch_related(
             Prefetch(
                 "task_lists",
                 queryset=TaskList.objects.prefetch_related(
@@ -55,9 +61,11 @@ def board_detail(request, pk):
     return render(request, "tasks/board_detail.html", {"board": board})
 
 
+@login_required
 def task_list(request):
     task_list = (
-        Task.objects.select_related("task_list", "task_list__board", "assignee")
+        Task.objects.filter(task_list__board__owner=request.user)
+        .select_related("task_list", "task_list__board", "assignee")
         .prefetch_related("tags")
         .order_by("task_list__board__name", "task_list__position", "pk")
     )
@@ -67,26 +75,33 @@ def task_list(request):
     return render(request, 'tasks/task_list.html', {'tasks': tasks})
 
 
+@login_required
 def task_detail(request, pk):
     task = get_object_or_404(
-        Task.objects.select_related("task_list", "task_list__board", "assignee").prefetch_related("tags"),
+        Task.objects.filter(task_list__board__owner=request.user)
+        .select_related("task_list", "task_list__board", "assignee")
+        .prefetch_related("tags"),
         pk=pk,
     )
     return render(request, 'tasks/task_detail.html', {'task': task})
 
 
+@login_required
 def task_create(request, board_pk=None):
     board = None
     if board_pk is not None:
-        board = get_object_or_404(Board.objects.prefetch_related("task_lists"), pk=board_pk)
+        board = get_object_or_404(
+            Board.objects.filter(owner=request.user).prefetch_related("task_lists"),
+            pk=board_pk,
+        )
 
     if request.method == 'POST':
-        form = TaskForm(request.POST, board=board)
+        form = TaskForm(request.POST, board=board, user=request.user)
         if form.is_valid():
             task = form.save()
             return redirect('board_detail', pk=task.task_list.board_id)
     else:
-        form = TaskForm(board=board)
+        form = TaskForm(board=board, user=request.user)
 
     context = {
         'form': form,
@@ -104,17 +119,21 @@ def task_create(request, board_pk=None):
     return render(request, 'tasks/task_form.html', context)
 
 
+@login_required
 def task_update(request, pk):
-    task = get_object_or_404(Task.objects.select_related("task_list", "task_list__board"), pk=pk)
+    task = get_object_or_404(
+        Task.objects.filter(task_list__board__owner=request.user).select_related("task_list", "task_list__board"),
+        pk=pk,
+    )
     board = task.task_list.board
 
     if request.method == 'POST':
-        form = TaskForm(request.POST, instance=task, board=board)
+        form = TaskForm(request.POST, instance=task, board=board, user=request.user)
         if form.is_valid():
             form.save()
             return redirect('board_detail', pk=board.pk)
     else:
-        form = TaskForm(instance=task, board=board)
+        form = TaskForm(instance=task, board=board, user=request.user)
 
     context = {
         'form': form,
@@ -133,8 +152,12 @@ def task_update(request, pk):
     return render(request, 'tasks/task_form.html', context)
 
 
+@login_required
 def task_delete(request, pk):
-    task = get_object_or_404(Task.objects.select_related("task_list", "task_list__board"), pk=pk)
+    task = get_object_or_404(
+        Task.objects.filter(task_list__board__owner=request.user).select_related("task_list", "task_list__board"),
+        pk=pk,
+    )
 
     if request.method == 'POST':
         board_id = task.task_list.board_id
