@@ -1,10 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login
 from django.core.paginator import Paginator
-from django.db.models import Prefetch
+from django.db.models import Max, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import BoardForm, RegisterForm, TaskForm
+from tasks.forms import BoardForm, RegisterForm, TaskForm, TaskListForm
 from tasks.models import Board, Task, TaskList
 
 
@@ -62,6 +62,38 @@ def board_create(request):
         "submit_label": "Guardar tablero",
     }
     return render(request, "tasks/board_form.html", context)
+
+
+@login_required
+def board_task_list_create(request, board_pk):
+    board = get_object_or_404(
+        Board.objects.filter(owner=request.user).select_related("owner"),
+        pk=board_pk,
+    )
+
+    if request.method == "POST":
+        form = TaskListForm(request.POST, board=board)
+        if form.is_valid():
+            task_list = form.save(commit=False)
+            max_position = board.task_lists.aggregate(max_position=Max("position"))["max_position"] or 0
+            task_list.board = board
+            task_list.position = max_position + 1
+            task_list.save()
+            return redirect("board_detail", pk=board.pk)
+    else:
+        form = TaskListForm(board=board)
+
+    context = {
+        "form": form,
+        "board": board,
+        "page_title": "Nueva lista",
+        "screen_title": "Nueva lista",
+        "screen_subtitle": "Crea una nueva lista dentro del tablero actual.",
+        "panel_title": "Detalles de la lista",
+        "panel_subtitle": "Define el nombre de la lista que quieres añadir a este tablero.",
+        "submit_label": "Guardar lista",
+    }
+    return render(request, "tasks/task_list_form.html", context)
 
 
 @login_required

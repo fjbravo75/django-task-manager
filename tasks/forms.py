@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from tasks.models import Board, Task
+from tasks.models import Board, Task, TaskList
 
 
 class RegisterForm(UserCreationForm):
@@ -25,6 +25,43 @@ class BoardForm(forms.ModelForm):
             "name": "Nombre",
             "description": "Descripción",
         }
+
+
+class TaskListForm(forms.ModelForm):
+    class Meta:
+        model = TaskList
+        fields = ["name"]
+        labels = {
+            "name": "Nombre",
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.board = kwargs.pop("board", None)
+        super().__init__(*args, **kwargs)
+        if self.board is not None:
+            self.instance.board = self.board
+
+    def save(self, commit=True):
+        task_list = super().save(commit=False)
+        if self.board is not None:
+            task_list.board = self.board
+        if commit:
+            task_list.save()
+        return task_list
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name")
+        if not name or self.board is None:
+            return name
+
+        duplicates = TaskList.objects.filter(board=self.board, name=name)
+        if self.instance.pk:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+
+        if duplicates.exists():
+            raise forms.ValidationError("Ya existe una lista con ese nombre en este tablero.")
+
+        return name
 
 
 class TaskForm(forms.ModelForm):

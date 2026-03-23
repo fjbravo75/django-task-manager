@@ -63,6 +63,15 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["form"].fields.keys()), ["name", "description"])
 
+    def test_board_detail_shows_task_list_create_cta(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("board_task_list_create", args=[self.board_a.pk]))
+        self.assertContains(response, "Nueva lista")
+
     def test_board_create_assigns_owner_in_server_and_redirects_to_detail(self):
         self.client.force_login(self.user_a)
 
@@ -132,6 +141,65 @@ class BoardTaskAuthorizationTests(TestCase):
         response = self.client.get(reverse("board_task_create", args=[self.board_b.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_board_task_list_create_requires_authentication(self):
+        response = self.client.get(reverse("board_task_list_create", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_task_list_create", args=[self.board_a.pk]), response.url)
+
+    def test_board_task_list_create_rejects_foreign_board(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_list_create", args=[self.board_b.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_task_list_create_form_only_exposes_name(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_list_create", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["form"].fields.keys()), ["name"])
+        self.assertContains(response, self.board_a.name)
+
+    def test_board_task_list_create_assigns_board_and_position_in_server_and_redirects(self):
+        self.client.force_login(self.user_a)
+        TaskList.objects.create(board=self.board_a, name="Doing", position=5)
+
+        response = self.client.post(
+            reverse("board_task_list_create", args=[self.board_a.pk]),
+            {
+                "name": "Done",
+                "board": self.board_b.pk,
+                "position": 999,
+            },
+        )
+
+        task_list = TaskList.objects.get(board=self.board_a, name="Done")
+
+        self.assertEqual(task_list.board, self.board_a)
+        self.assertNotEqual(task_list.board, self.board_b)
+        self.assertEqual(task_list.position, 6)
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        self.assertContains(board_detail_response, "Done")
+
+    def test_board_task_list_create_rejects_duplicate_name_within_same_board(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_list_create", args=[self.board_a.pk]),
+            {
+                "name": "Todo",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(TaskList.objects.filter(board=self.board_a, name="Todo").count(), 1)
+        self.assertIn("name", response.context["form"].errors)
 
     def test_task_create_form_only_exposes_owned_task_lists(self):
         self.client.force_login(self.user_a)
