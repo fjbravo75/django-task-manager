@@ -33,6 +33,60 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Board A")
         self.assertNotContains(response, "Board B")
+        self.assertContains(response, reverse("board_create"))
+        self.assertContains(response, "Nuevo tablero")
+
+    def test_empty_board_list_shows_create_cta_without_admin_dependency(self):
+        user_c = User.objects.create_user(username="carol", password="testpass123")
+        self.client.force_login(user_c)
+
+        response = self.client.get(reverse("board_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Todavía no hay tableros")
+        self.assertContains(response, reverse("board_create"))
+        self.assertContains(response, "Crear tablero")
+        self.assertNotContains(response, "Ir al admin")
+        self.assertNotContains(response, "/admin/")
+
+    def test_board_create_requires_authentication(self):
+        response = self.client.get(reverse("board_create"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_create"), response.url)
+
+    def test_board_create_form_only_exposes_name_and_description(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_create"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["form"].fields.keys()), ["name", "description"])
+
+    def test_board_create_assigns_owner_in_server_and_redirects_to_detail(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_create"),
+            {
+                "name": "Roadmap 2026",
+                "description": "Board created from the UI",
+                "owner": self.user_b.pk,
+            },
+        )
+
+        board = Board.objects.get(name="Roadmap 2026")
+
+        self.assertEqual(board.owner, self.user_a)
+        self.assertNotEqual(board.owner, self.user_b)
+        self.assertRedirects(response, reverse("board_detail", args=[board.pk]))
+
+        board_list_response = self.client.get(reverse("board_list"))
+        self.assertContains(board_list_response, "Roadmap 2026")
+
+        self.client.force_login(self.user_b)
+        foreign_detail_response = self.client.get(reverse("board_detail", args=[board.pk]))
+        self.assertEqual(foreign_detail_response.status_code, 404)
 
     def test_user_cannot_open_board_detail_for_foreign_board(self):
         self.client.force_login(self.user_a)

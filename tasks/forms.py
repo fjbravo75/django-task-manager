@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from tasks.models import Task
+from tasks.models import Board, Task
 
 
 class RegisterForm(UserCreationForm):
@@ -15,6 +15,16 @@ class RegisterForm(UserCreationForm):
         self.fields["username"].label = "Usuario"
         self.fields["password1"].label = "Contraseña"
         self.fields["password2"].label = "Confirmar contraseña"
+
+
+class BoardForm(forms.ModelForm):
+    class Meta:
+        model = Board
+        fields = ["name", "description"]
+        labels = {
+            "name": "Nombre",
+            "description": "Descripción",
+        }
 
 
 class TaskForm(forms.ModelForm):

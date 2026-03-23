@@ -12,7 +12,13 @@
                 </p>
             </div>
 
-            <div class="flex shrink-0">
+            <div class="flex shrink-0 flex-wrap gap-3">
+                <a
+                    class="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    href="{% url 'board_create' %}"
+                >
+                    Nuevo tablero
+                </a>
                 <a
                     class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                     href="{% url 'task_list' %}"
@@ -67,13 +73,13 @@
                 <div class="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
                     <h3 class="text-xl font-semibold text-slate-950">Todavía no hay tableros</h3>
                     <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
-                        Crea un tablero desde el administrador para empezar a organizar listas y tareas.
+                        Crea tu primer tablero desde esta interfaz para empezar a organizar listas y tareas.
                     </p>
                     <a
                         class="mt-6 inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                        href="/admin/"
+                        href="{% url 'board_create' %}"
                     >
-                        Ir al admin
+                        Crear tablero
                     </a>
                 </div>
             {% endif %}

@@ -4,7 +4,7 @@ from django.core.paginator import Paginator
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import RegisterForm, TaskForm
+from tasks.forms import BoardForm, RegisterForm, TaskForm
 from tasks.models import Board, Task, TaskList
 
 
@@ -38,6 +38,30 @@ def board_list(request):
         .order_by("name", "pk")
     )
     return render(request, "tasks/board_list.html", {"boards": boards})
+
+
+@login_required
+def board_create(request):
+    if request.method == "POST":
+        form = BoardForm(request.POST)
+        if form.is_valid():
+            board = form.save(commit=False)
+            board.owner = request.user
+            board.save()
+            return redirect("board_detail", pk=board.pk)
+    else:
+        form = BoardForm()
+
+    context = {
+        "form": form,
+        "page_title": "Nuevo tablero",
+        "screen_title": "Nuevo tablero",
+        "screen_subtitle": "Crea el tablero principal desde la interfaz web para empezar a organizar tu trabajo.",
+        "panel_title": "Detalles del tablero",
+        "panel_subtitle": "Define el nombre y una breve descripción inicial del tablero.",
+        "submit_label": "Guardar tablero",
+    }
+    return render(request, "tasks/board_form.html", context)
 
 
 @login_required
