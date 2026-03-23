@@ -961,3 +961,64 @@
     }
   }
 }
+/* --- UI final polish: autofill, header spacing, hidden board tasks --- */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+input:-moz-autofill,
+textarea:-moz-autofill,
+select:-moz-autofill {
+  -webkit-text-fill-color: rgb(15 23 42);
+  box-shadow: 0 0 0 1000px rgb(255 255 255) inset;
+  color: rgb(15 23 42);
+  transition: background-color 9999s ease-out 0s;
+  caret-color: rgb(15 23 42);
+}
+
+.page-section > header {
+  margin-bottom: 0.75rem;
+}
+
+.board-hidden-tasks {
+  display: inline;
+}
+
+.board-hidden-tasks > summary {
+  display: inline;
+  margin-left: 0.25rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 500;
+  color: rgb(51 65 85);
+  transition: color 150ms ease;
+}
+
+.board-hidden-tasks > summary::-webkit-details-marker {
+  display: none;
+}
+
+.board-hidden-tasks > summary::marker {
+  content: "";
+}
+
+.board-hidden-tasks > summary:hover {
+  color: rgb(2 6 23);
+}
+
+.board-hidden-tasks[open] > summary {
+  display: inline-block;
+  margin-top: 0.25rem;
+  margin-left: 0;
+}
+
+.board-hidden-tasks__content {
+  margin-top: 1rem;
+  display: grid;
+  gap: 1.25rem;
+}

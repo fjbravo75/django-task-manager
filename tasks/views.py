@@ -56,7 +56,7 @@ def board_create(request):
         "form": form,
         "page_title": "Nuevo tablero",
         "screen_title": "Nuevo tablero",
-        "screen_subtitle": "Crea el tablero principal desde la interfaz web para empezar a organizar tu trabajo.",
+        "screen_subtitle": "Crea un tablero para empezar a organizar tu trabajo.",
         "panel_title": "Detalles del tablero",
         "panel_subtitle": "Define el nombre y una breve descripción inicial del tablero.",
         "submit_label": "Guardar tablero",
@@ -82,7 +82,31 @@ def board_detail(request, pk):
         ),
         pk=pk,
     )
-    return render(request, "tasks/board_detail.html", {"board": board})
+    board_task_lists = []
+    for task_list in board.task_lists.all():
+        all_tasks = list(task_list.tasks.all())
+        total_tasks = len(all_tasks)
+        visible_tasks = all_tasks[:5]
+        hidden_tasks = all_tasks[5:]
+        has_hidden_tasks = total_tasks > 5
+        board_task_lists.append(
+            {
+                "task_list": task_list,
+                "total_tasks": total_tasks,
+                "visible_tasks": visible_tasks,
+                "hidden_tasks": hidden_tasks,
+                "has_hidden_tasks": has_hidden_tasks,
+            }
+        )
+
+    return render(
+        request,
+        "tasks/board_detail.html",
+        {
+            "board": board,
+            "board_task_lists": board_task_lists,
+        },
+    )
 
 
 @login_required
@@ -134,7 +158,7 @@ def task_create(request, board_pk=None):
         'screen_title': 'Nueva tarea',
         'screen_subtitle': 'Crea una nueva tarea dentro del tablero actual.' if board else 'Crea una nueva tarea y asígnala a una lista existente.',
         'panel_title': 'Detalles de la tarea',
-        'panel_subtitle': 'Selecciona una de las listas del tablero actual para guardar la tarea.' if board else 'Completa los campos principales para guardar la tarea dentro de una lista del tablero.',
+        'panel_subtitle': 'Selecciona una de las listas del tablero para guardar la tarea.' if board else 'Completa los campos principales para guardar la tarea.',
         'submit_label': 'Guardar tarea',
         'cancel_url': 'board_detail' if board else 'board_list',
         'cancel_url_kwargs': {'pk': board.pk} if board else None,
@@ -165,9 +189,9 @@ def task_update(request, pk):
         'board': board,
         'page_title': f'Editar {task.title}',
         'screen_title': 'Editar tarea',
-        'screen_subtitle': 'Actualiza la tarea dentro del tablero actual.',
+        'screen_subtitle': 'Actualiza esta tarea dentro del tablero actual.',
         'panel_title': 'Editar detalles',
-        'panel_subtitle': 'Solo se muestran listas del tablero al que ya pertenece esta tarea.',
+        'panel_subtitle': 'Solo se muestran listas del tablero al que pertenece esta tarea.',
         'submit_label': 'Guardar cambios',
         'cancel_url': 'board_detail',
         'cancel_url_kwargs': {'pk': board.pk},

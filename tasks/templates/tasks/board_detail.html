@@ -3,7 +3,7 @@
 {% block title %}{{ board.name }}{% endblock %}
 
 {% block content %}
-    <section class="space-y-10">
+    <section class="page-section space-y-10 pt-2">
         <header class="space-y-6">
             <div class="max-w-3xl">
                 <a
@@ -14,11 +14,21 @@
                 </a>
 
                 <h1 class="mt-4 text-4xl font-bold tracking-tight text-slate-950 lg:text-5xl">
-                    {{ board.name }}
+                    {% if board.name == "Migracion inicial" or board.name == "Migración inicial" %}
+                        Mi tablero principal
+                    {% else %}
+                        {{ board.name }}
+                    {% endif %}
                 </h1>
 
                 <p class="mt-4 text-lg leading-8 text-slate-600">
-                    {% if board.description %}{{ board.description }}{% else %}Sin descripción disponible.{% endif %}
+                    {% if board.description == "Tablero generado automaticamente para conservar las tareas existentes." or board.description == "Tablero generado automáticamente para conservar las tareas existentes." %}
+                        Un espacio general para organizar listas y tareas.
+                    {% elif board.description %}
+                        {{ board.description }}
+                    {% else %}
+                        Este tablero aún no tiene descripción.
+                    {% endif %}
                 </p>
             </div>
 
@@ -41,26 +51,26 @@
 
         <section class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-10">
             <div class="border-b border-slate-200 pb-6">
-                <h2 class="text-2xl font-semibold text-slate-900">Resumen del tablero</h2>
-                <p class="mt-3 text-sm text-slate-600">Propietario: {{ board.owner.username }}</p>
+                <h2 class="text-2xl font-semibold text-slate-900">Listas del tablero</h2>
+                <p class="mt-3 text-sm text-slate-600">Gestiona las listas y revisa las tareas de este tablero.</p>
             </div>
 
-            {% if board.task_lists.all %}
+            {% if board_task_lists %}
                 <div class="mt-8 space-y-8">
-                    {% for task_list in board.task_lists.all %}
+                    {% for item in board_task_lists %}
                         <section class="rounded-2xl border border-slate-200 bg-slate-50 p-6 lg:p-7">
                             <header>
                                 <h3 class="text-2xl font-semibold tracking-tight text-slate-900">
-                                    {{ task_list.name }}
+                                    {{ item.task_list.name }}
                                 </h3>
                                 <p class="mt-2 text-sm text-slate-500">
-                                    {{ task_list.tasks.count }} tarea{{ task_list.tasks.count|pluralize:"s" }}
+                                    {{ item.total_tasks }} tarea{{ item.total_tasks|pluralize:"s" }}
                                 </p>
                             </header>
 
                             <div class="mt-6 space-y-5">
-                                {% if task_list.tasks.all %}
-                                    {% for task in task_list.tasks.all %}
+                                {% if item.visible_tasks %}
+                                    {% for task in item.visible_tasks %}
                                         <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                                             <div class="space-y-4">
                                                 <div>
@@ -115,6 +125,73 @@
                                             </div>
                                         </article>
                                     {% endfor %}
+
+                                    {% if item.has_hidden_tasks %}
+                                        <div class="mt-4 border-t border-slate-200 pt-4 text-sm leading-6 text-slate-600">
+                                            Mostrando 5 de {{ item.total_tasks }} tareas.
+                                            <details class="board-hidden-tasks">
+                                                <summary class="board-hidden-tasks__summary">Mostrar todas</summary>
+
+                                                <div class="board-hidden-tasks__content">
+                                                    {% for task in item.hidden_tasks %}
+                                                        <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                                                            <div class="space-y-4">
+                                                                <div>
+                                                                    <h4 class="text-lg font-semibold tracking-tight text-slate-900">
+                                                                        <a
+                                                                            class="transition hover:text-slate-700"
+                                                                            href="{% url 'task_detail' task.pk %}"
+                                                                        >
+                                                                            {{ task.title }}
+                                                                        </a>
+                                                                    </h4>
+
+                                                                    {% if task.description %}
+                                                                        <p class="mt-3 text-sm leading-7 text-slate-600">
+                                                                            {{ task.description }}
+                                                                        </p>
+                                                                    {% endif %}
+                                                                </div>
+
+                                                                <div class="flex flex-wrap items-center gap-2">
+                                                                    <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                                                        {{ task.get_priority_display }}
+                                                                    </span>
+
+                                                                    {% if task.assignee %}
+                                                                        <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                                                                            {{ task.assignee.username }}
+                                                                        </span>
+                                                                    {% endif %}
+
+                                                                    {% if task.due_date %}
+                                                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                                                                            {{ task.due_date|date:"d/m/Y" }}
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </div>
+
+                                                                <div class="flex items-center gap-5 text-sm font-medium">
+                                                                    <a
+                                                                        class="text-slate-600 transition hover:text-slate-900"
+                                                                        href="{% url 'task_detail' task.pk %}"
+                                                                    >
+                                                                        Ver detalle
+                                                                    </a>
+                                                                    <a
+                                                                        class="text-slate-600 transition hover:text-slate-900"
+                                                                        href="{% url 'task_update' task.pk %}"
+                                                                    >
+                                                                        Editar
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </article>
+                                                    {% endfor %}
+                                                </div>
+                                            </details>
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
                                         <p class="text-sm leading-6 text-slate-500">
@@ -128,9 +205,9 @@
                 </div>
             {% else %}
                 <div class="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
-                    <h3 class="text-xl font-semibold text-slate-950">Este tablero todavía no tiene listas</h3>
+                    <h3 class="text-xl font-semibold text-slate-950">Este tablero aún no tiene listas</h3>
                     <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
-                        Añade listas desde el administrador para empezar a organizar las tareas del tablero.
+                        Añade listas para empezar a organizar las tareas de este tablero.
                     </p>
                 </div>
             {% endif %}

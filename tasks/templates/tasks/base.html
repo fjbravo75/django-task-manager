@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}django-task-manager{% endblock %}</title>
+    <title>{% block title %}Gestor de tareas{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'tasks/styles.css' %}">
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
@@ -14,7 +14,7 @@
                 class="text-lg font-semibold tracking-tight text-slate-950 transition hover:text-slate-700"
                 href="{% url 'board_list' %}"
             >
-                django-task-manager
+                Gestor de tareas
             </a>
 
             <div class="flex flex-wrap items-center gap-3 text-sm">
@@ -26,7 +26,7 @@
                     <form method="post" action="{% url 'logout' %}" class="inline-flex">
                         {% csrf_token %}
                         <button
-                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
                             type="submit"
                         >
                             Cerrar sesión
@@ -34,17 +34,17 @@
                     </form>
                 {% else %}
                     <a
-                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                         href="{% url 'login' %}"
                     >
-                        Login
+                        Iniciar sesión
                     </a>
 
                     <a
-                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                         href="{% url 'register' %}"
                     >
-                        Registro
+                        Crear cuenta
                     </a>
                 {% endif %}
             </div>

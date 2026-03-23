@@ -3,12 +3,12 @@
 {% block title %}Todas las tareas{% endblock %}
 
 {% block content %}
-    <section class="space-y-6">
-        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section class="page-section task-list-page space-y-8 pt-2">
+        <header class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0 space-y-2">
-                <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Listado de tareas</h1>
+                <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Tareas</h1>
                 <p class="max-w-2xl text-sm leading-6 text-slate-600">
-                    Vista transitoria de todas las tareas. La navegación principal del proyecto ya entra por tableros.
+                    Consulta todas tus tareas en un solo lugar.
                 </p>
             </div>
 
@@ -18,11 +18,11 @@
             </div>
         </header>
 
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8 task-list-panel">
             <div class="mb-6 border-b border-slate-200 pb-4">
-                <h2 class="text-lg font-semibold text-slate-950">Tareas disponibles</h2>
+                <h2 class="text-lg font-semibold text-slate-950">Todas las tareas</h2>
                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                    Revisa la lista actual de cada tarea y accede al formulario para crear o actualizar tareas sobre la nueva base relacional.
+                    Consulta el estado de cada tarea y entra en su detalle cuando lo necesites.
                 </p>
             </div>
 
@@ -99,9 +99,9 @@
                 {% endif %}
             {% else %}
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
-                    <h3 class="text-lg font-semibold text-slate-950">Todavía no hay tareas</h3>
+                    <h3 class="text-lg font-semibold text-slate-950">Aún no hay tareas</h3>
                     <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-                        Crea la primera tarea para empezar a trabajar desde la interfaz web.
+                        Crea tu primera tarea para empezar a organizar el trabajo.
                     </p>
                     <a class="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" href="{% url 'task_create' %}">Crear tarea</a>
                 </div>

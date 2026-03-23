@@ -54,7 +54,7 @@
                         {% if board %}
                             <p class="text-sm leading-6 text-slate-500">Solo se muestran listas del tablero actual.</p>
                         {% else %}
-                            <p class="text-sm leading-6 text-slate-500">La lista determina el estado actual de la tarea en esta fase del proyecto.</p>
+                            <p class="text-sm leading-6 text-slate-500">Elige la lista en la que quieres guardar esta tarea.</p>
                         {% endif %}
                         {{ form.task_list.errors }}
                     </div>
@@ -62,7 +62,7 @@
 
                 {% if board and task_list_count == 0 %}
                     <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                        Este tablero no tiene listas disponibles. Crea primero las listas desde el admin para poder añadir tareas.
+                        Este tablero aún no tiene listas. Añade una lista antes de crear tareas.
                     </div>
                 {% endif %}
 
