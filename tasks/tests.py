@@ -218,6 +218,17 @@ class BoardTaskAuthorizationTests(TestCase):
         )
         self.assertContains(response, "Crear la primera tarea")
 
+    def test_board_detail_shows_task_move_control_when_board_has_another_list(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("board_task_move", args=[self.board_a.pk, self.task_a.pk]))
+        self.assertContains(response, 'name="move-{}-task_list"'.format(self.task_a.pk), html=False)
+        self.assertContains(response, doing.name)
+
     def test_board_task_create_preselects_task_list_from_query_param(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
         self.client.force_login(self.user_a)
@@ -347,6 +358,59 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, self.task_a.get_priority_display())
         self.assertContains(response, reverse("task_detail", args=[self.task_a.pk]))
         self.assertContains(response, reverse("task_update", args=[self.task_a.pk]))
+
+    def test_board_task_move_moves_task_to_another_list_and_redirects_to_detail(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_move", args=[self.board_a.pk, self.task_a.pk]),
+            {
+                f"move-{self.task_a.pk}-task_list": str(doing.pk),
+            },
+        )
+
+        self.task_a.refresh_from_db()
+
+        self.assertEqual(self.task_a.task_list, doing)
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        self.assertContains(board_detail_response, self.task_a.title)
+        self.assertContains(board_detail_response, doing.name)
+
+    def test_board_task_move_rejects_task_list_from_another_board_same_owner(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_task_list = TaskList.objects.create(board=other_board, name="Later", position=1)
+        TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_move", args=[self.board_a.pk, self.task_a.pk]),
+            {
+                f"move-{self.task_a.pk}-task_list": str(other_task_list.pk),
+            },
+        )
+
+        self.task_a.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.task_a.task_list, self.todo_a)
+        self.assertContains(response, "Selecciona una lista válida.")
+
+    def test_user_cannot_move_foreign_task_from_board_detail(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_move", args=[self.board_b.pk, self.task_b.pk]),
+            {
+                f"move-{self.task_b.pk}-task_list": str(self.todo_b.pk),
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.task_b.refresh_from_db()
+        self.assertEqual(self.task_b.task_list, self.todo_b)
 
     def test_task_create_form_only_exposes_owned_task_lists(self):
         self.client.force_login(self.user_a)

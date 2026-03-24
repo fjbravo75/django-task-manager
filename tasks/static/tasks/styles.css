@@ -1022,3 +1022,108 @@ select:-moz-autofill {
   display: grid;
   gap: 1.25rem;
 }
+
+.task-card-meta-row {
+  display: grid;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.task-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-card-move {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-card-move--empty {
+  display: none;
+}
+
+.task-card-move-select select {
+  min-width: 9rem;
+  height: 2.25rem;
+  border: 1px solid var(--color-slate-300);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-white);
+  color: var(--color-slate-700);
+  padding: 0 0.75rem;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+}
+
+.task-card-move-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-slate-300);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-white);
+  color: var(--color-slate-700);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--default-transition-duration) var(--default-transition-timing-function),
+              color var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.task-card-move-button:hover {
+  background-color: var(--color-slate-100);
+  color: var(--color-slate-900);
+}
+
+.task-card-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.task-card-links a {
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.task-card-move-error {
+  margin-top: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-rose-700);
+}
+
+.task-card-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .task-card-meta-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 1rem;
+  }
+
+  .task-card-move {
+    justify-self: start;
+  }
+
+  .task-card-links {
+    justify-self: end;
+  }
+
+  .task-card-move--empty {
+    display: block;
+  }
+}

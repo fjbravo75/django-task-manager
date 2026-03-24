@@ -2,9 +2,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login
 from django.core.paginator import Paginator
 from django.db.models import Max, Prefetch
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import BoardForm, RegisterForm, TaskForm, TaskListForm
+from tasks.forms import BoardForm, RegisterForm, TaskForm, TaskListForm, TaskMoveForm
 from tasks.models import Board, Task, TaskList
 
 
@@ -98,8 +99,17 @@ def board_task_list_create(request, board_pk):
 
 @login_required
 def board_detail(request, pk):
-    board = get_object_or_404(
-        Board.objects.filter(owner=request.user)
+    board = _get_owned_board_with_tasks(request.user, pk)
+    return render(
+        request,
+        "tasks/board_detail.html",
+        _build_board_detail_context(board),
+    )
+
+
+def _get_owned_board_with_tasks(user, board_pk):
+    return get_object_or_404(
+        Board.objects.filter(owner=user)
         .select_related("owner")
         .prefetch_related(
             Prefetch(
@@ -112,11 +122,36 @@ def board_detail(request, pk):
                 ).order_by("position", "pk"),
             )
         ),
-        pk=pk,
+        pk=board_pk,
     )
+
+
+def _build_task_move_form(board, task, data=None):
+    return TaskMoveForm(
+        data=data,
+        board=board,
+        task=task,
+        prefix=f"move-{task.pk}",
+    )
+
+
+def _get_task_from_board(board, task_pk):
+    for task_list in board.task_lists.all():
+        for task in task_list.tasks.all():
+            if task.pk == task_pk:
+                return task
+    raise Http404
+
+
+def _build_board_detail_context(board, *, bound_move_form=None):
     board_task_lists = []
     for task_list in board.task_lists.all():
         all_tasks = list(task_list.tasks.all())
+        for task in all_tasks:
+            if bound_move_form is not None and bound_move_form.task.pk == task.pk:
+                task.move_form = bound_move_form
+            else:
+                task.move_form = _build_task_move_form(board, task)
         total_tasks = len(all_tasks)
         visible_tasks = all_tasks[:5]
         hidden_tasks = all_tasks[5:]
@@ -131,14 +166,10 @@ def board_detail(request, pk):
             }
         )
 
-    return render(
-        request,
-        "tasks/board_detail.html",
-        {
-            "board": board,
-            "board_task_lists": board_task_lists,
-        },
-    )
+    return {
+        "board": board,
+        "board_task_lists": board_task_lists,
+    }
 
 
 @login_required
@@ -276,3 +307,21 @@ def task_delete(request, pk):
         'panel_subtitle': 'Si confirmas, esta tarea se eliminará para siempre de su lista actual.',
     }
     return render(request, 'tasks/task_confirm_delete.html', context)
+
+
+@login_required
+def board_task_move(request, board_pk, pk):
+    board = _get_owned_board_with_tasks(request.user, board_pk)
+    task = _get_task_from_board(board, pk)
+
+    if request.method != "POST":
+        return redirect("board_detail", pk=board.pk)
+
+    form = _build_task_move_form(board, task, data=request.POST)
+    if form.is_valid():
+        task.task_list = form.cleaned_data["task_list"]
+        task.save()
+        return redirect("board_detail", pk=board.pk)
+
+    context = _build_board_detail_context(board, bound_move_form=form)
+    return render(request, "tasks/board_detail.html", context, status=200)

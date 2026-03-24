@@ -101,3 +101,35 @@ class TaskForm(forms.ModelForm):
 
         self.fields["task_list"].queryset = task_list_queryset.order_by("board__name", "position", "name")
         self.fields["tags"].queryset = tag_queryset.order_by("board__name", "name")
+
+
+class TaskMoveForm(forms.Form):
+    task_list = forms.ChoiceField(
+        label="Mover a",
+        choices=(),
+        error_messages={
+            "required": "Selecciona una lista válida.",
+            "invalid_choice": "Selecciona una lista válida.",
+        },
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.board = kwargs.pop("board")
+        self.task = kwargs.pop("task")
+        super().__init__(*args, **kwargs)
+        self.available_task_lists = {
+            str(task_list.pk): task_list
+            for task_list in self.board.task_lists.all()
+            if task_list.pk != self.task.task_list_id
+        }
+        self.fields["task_list"].choices = [
+            (task_list_pk, task_list.name)
+            for task_list_pk, task_list in self.available_task_lists.items()
+        ]
+        self.has_available_task_lists = bool(self.available_task_lists)
+
+    def clean_task_list(self):
+        task_list = self.available_task_lists.get(self.cleaned_data["task_list"])
+        if task_list is None:
+            raise forms.ValidationError("Selecciona una lista válida.")
+        return task_list

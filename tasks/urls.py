@@ -1,6 +1,6 @@
 from django.urls import path
 
-from tasks.views import board_create, board_detail, board_list, board_task_list_create, task_create, task_delete, task_detail, task_list, task_update
+from tasks.views import board_create, board_detail, board_list, board_task_list_create, board_task_move, task_create, task_delete, task_detail, task_list, task_update
 
 urlpatterns = [
     path("", board_list, name="board_list"),
@@ -8,6 +8,7 @@ urlpatterns = [
     path("boards/<int:pk>/", board_detail, name="board_detail"),
     path("boards/<int:board_pk>/lists/create/", board_task_list_create, name="board_task_list_create"),
     path("boards/<int:board_pk>/tasks/create/", task_create, name="board_task_create"),
+    path("boards/<int:board_pk>/tasks/<int:pk>/move/", board_task_move, name="board_task_move"),
     path("tasks/", task_list, name="task_list"),
     path("tasks/create/", task_create, name="task_create"),
     path("tasks/<int:pk>/", task_detail, name="task_detail"),

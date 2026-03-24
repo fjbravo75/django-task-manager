@@ -106,8 +106,8 @@
                                                     {% endif %}
                                                 </div>
 
-                                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                                    <div class="flex flex-wrap items-center gap-2">
+                                                <div class="task-card-meta-row">
+                                                    <div class="task-card-badges">
                                                         <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                                             {{ task.get_priority_display }}
                                                         </span>
@@ -125,7 +125,31 @@
                                                         {% endif %}
                                                     </div>
 
-                                                    <div class="flex flex-wrap items-center gap-4 text-sm font-medium">
+                                                    {% if task.move_form.has_available_task_lists %}
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'board_task_move' board.pk task.pk %}"
+                                                            class="task-card-move"
+                                                        >
+                                                            {% csrf_token %}
+                                                            <label class="task-card-sr-only" for="{{ task.move_form.task_list.id_for_label }}">
+                                                                Mover tarea a otra lista
+                                                            </label>
+                                                            <div class="task-card-move-select">
+                                                                {{ task.move_form.task_list }}
+                                                            </div>
+                                                            <button
+                                                                class="task-card-move-button"
+                                                                type="submit"
+                                                            >
+                                                                Mover
+                                                            </button>
+                                                        </form>
+                                                    {% else %}
+                                                        <div class="task-card-move task-card-move--empty" aria-hidden="true"></div>
+                                                    {% endif %}
+
+                                                    <div class="task-card-links">
                                                         <a
                                                             class="text-slate-600 transition hover:text-slate-900"
                                                             href="{% url 'task_detail' task.pk %}"
@@ -140,6 +164,12 @@
                                                         </a>
                                                     </div>
                                                 </div>
+
+                                                {% if task.move_form.task_list.errors %}
+                                                    <div class="task-card-move-error">
+                                                        {{ task.move_form.task_list.errors }}
+                                                    </div>
+                                                {% endif %}
                                             </div>
                                         </article>
                                     {% endfor %}
@@ -171,8 +201,8 @@
                                                                     {% endif %}
                                                                 </div>
 
-                                                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                                                    <div class="flex flex-wrap items-center gap-2">
+                                                                <div class="task-card-meta-row">
+                                                                    <div class="task-card-badges">
                                                                         <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                                                             {{ task.get_priority_display }}
                                                                         </span>
@@ -190,7 +220,31 @@
                                                                         {% endif %}
                                                                     </div>
 
-                                                                    <div class="flex flex-wrap items-center gap-4 text-sm font-medium">
+                                                                    {% if task.move_form.has_available_task_lists %}
+                                                                        <form
+                                                                            method="post"
+                                                                            action="{% url 'board_task_move' board.pk task.pk %}"
+                                                                            class="task-card-move"
+                                                                        >
+                                                                            {% csrf_token %}
+                                                                            <label class="task-card-sr-only" for="{{ task.move_form.task_list.id_for_label }}">
+                                                                                Mover tarea a otra lista
+                                                                            </label>
+                                                                            <div class="task-card-move-select">
+                                                                                {{ task.move_form.task_list }}
+                                                                            </div>
+                                                                            <button
+                                                                                class="task-card-move-button"
+                                                                                type="submit"
+                                                                            >
+                                                                                Mover
+                                                                            </button>
+                                                                        </form>
+                                                                    {% else %}
+                                                                        <div class="task-card-move task-card-move--empty" aria-hidden="true"></div>
+                                                                    {% endif %}
+
+                                                                    <div class="task-card-links">
                                                                         <a
                                                                             class="text-slate-600 transition hover:text-slate-900"
                                                                             href="{% url 'task_detail' task.pk %}"
@@ -205,6 +259,12 @@
                                                                         </a>
                                                                     </div>
                                                                 </div>
+
+                                                                {% if task.move_form.task_list.errors %}
+                                                                    <div class="task-card-move-error">
+                                                                        {{ task.move_form.task_list.errors }}
+                                                                    </div>
+                                                                {% endif %}
                                                             </div>
                                                         </article>
                                                     {% endfor %}
