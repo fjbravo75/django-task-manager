@@ -204,7 +204,6 @@ def task_create(request, board_pk=None):
 
     if preselected_task_list is not None:
         screen_subtitle = 'Crea una nueva tarea dentro de la lista seleccionada.'
-        panel_subtitle = 'La lista inicial llega preseleccionada, pero puedes cambiarla dentro de este tablero.'
 
     context = {
         'form': form,

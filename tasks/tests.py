@@ -231,7 +231,30 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(list(form.fields["task_list"].queryset), [self.todo_a, doing])
         self.assertEqual(form.initial["task_list"], doing.pk)
         self.assertEqual(response.context["preselected_task_list"], doing)
-        self.assertContains(response, "La lista llega preseleccionada")
+        self.assertEqual(
+            response.context["panel_subtitle"],
+            "Selecciona una de las listas del tablero para guardar la tarea.",
+        )
+        self.assertContains(
+            response,
+            "La lista llega preseleccionada, pero puedes cambiarla dentro de este tablero.",
+            count=1,
+        )
+
+    def test_board_task_create_form_does_not_expose_assignee(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_create", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("task_list", form.fields)
+        self.assertIn("priority", form.fields)
+        self.assertIn("due_date", form.fields)
+        self.assertIn("tags", form.fields)
+        self.assertNotIn("assignee", form.fields)
+        self.assertNotContains(response, "Asignado a")
+        self.assertContains(response, "Solo se muestran listas del tablero actual.")
 
     def test_board_task_create_ignores_task_list_query_param_from_another_board(self):
         other_board = Board.objects.create(name="Board C", owner=self.user_a)
@@ -258,7 +281,6 @@ class BoardTaskAuthorizationTests(TestCase):
                 "description": "Cerrar la tarea desde el tablero",
                 "task_list": self.todo_a.pk,
                 "priority": Task.PRIORITY_HIGH,
-                "assignee": "",
                 "due_date": "",
                 "tags": [],
             },
@@ -284,7 +306,6 @@ class BoardTaskAuthorizationTests(TestCase):
                 "description": "",
                 "task_list": other_task_list.pk,
                 "priority": Task.PRIORITY_MEDIUM,
-                "assignee": "",
                 "due_date": "",
                 "tags": [],
             },
@@ -308,6 +329,25 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(response.context["task_list_count"], 0)
         self.assertContains(response, "Este tablero aún no tiene listas. Añade una lista antes de crear tareas.")
 
+    def test_task_update_form_does_not_expose_assignee(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_update", args=[self.task_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("assignee", response.context["form"].fields)
+        self.assertNotContains(response, "Asignado a")
+
+    def test_board_detail_shows_priority_badge_and_task_actions_for_visible_task(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.task_a.get_priority_display())
+        self.assertContains(response, reverse("task_detail", args=[self.task_a.pk]))
+        self.assertContains(response, reverse("task_update", args=[self.task_a.pk]))
+
     def test_task_create_form_only_exposes_owned_task_lists(self):
         self.client.force_login(self.user_a)
 
@@ -327,7 +367,6 @@ class BoardTaskAuthorizationTests(TestCase):
                 "description": "",
                 "task_list": self.todo_b.pk,
                 "priority": Task.PRIORITY_MEDIUM,
-                "assignee": "",
                 "due_date": "",
                 "tags": [],
             },

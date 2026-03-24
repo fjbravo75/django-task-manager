@@ -73,13 +73,12 @@ class TaskForm(forms.ModelForm):
 
     class Meta:
         model = Task
-        fields = ["title", "description", "task_list", "priority", "assignee", "due_date", "tags"]
+        fields = ["title", "description", "task_list", "priority", "due_date", "tags"]
         labels = {
             "title": "Título",
             "description": "Descripción",
             "task_list": "Lista",
             "priority": "Prioridad",
-            "assignee": "Asignado a",
             "tags": "Etiquetas",
         }
 
@@ -101,5 +100,4 @@ class TaskForm(forms.ModelForm):
             tag_queryset = tag_queryset.none()
 
         self.fields["task_list"].queryset = task_list_queryset.order_by("board__name", "position", "name")
-        self.fields["assignee"].queryset = self.fields["assignee"].queryset.order_by("username")
         self.fields["tags"].queryset = tag_queryset.order_by("board__name", "name")
