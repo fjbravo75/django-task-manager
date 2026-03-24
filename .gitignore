@@ -8,3 +8,6 @@ db.sqlite3
 .DS_Store
 .vscode/
 node_modules/
+
+AGENTS.md
+project_memory/
