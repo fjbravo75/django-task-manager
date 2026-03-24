@@ -201,6 +201,113 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(TaskList.objects.filter(board=self.board_a, name="Todo").count(), 1)
         self.assertIn("name", response.context["form"].errors)
 
+    def test_board_detail_shows_task_create_cta_for_each_task_list(self):
+        empty_task_list = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'{reverse("board_task_create", args=[self.board_a.pk])}?task_list={self.todo_a.pk}',
+        )
+        self.assertContains(
+            response,
+            f'{reverse("board_task_create", args=[self.board_a.pk])}?task_list={empty_task_list.pk}',
+        )
+        self.assertContains(response, "Crear la primera tarea")
+
+    def test_board_task_create_preselects_task_list_from_query_param(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            f'{reverse("board_task_create", args=[self.board_a.pk])}?task_list={doing.pk}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertEqual(list(form.fields["task_list"].queryset), [self.todo_a, doing])
+        self.assertEqual(form.initial["task_list"], doing.pk)
+        self.assertEqual(response.context["preselected_task_list"], doing)
+        self.assertContains(response, "La lista llega preseleccionada")
+
+    def test_board_task_create_ignores_task_list_query_param_from_another_board(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_task_list = TaskList.objects.create(board=other_board, name="Later", position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            f'{reverse("board_task_create", args=[self.board_a.pk])}?task_list={other_task_list.pk}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertNotIn("task_list", form.initial)
+        self.assertIsNone(response.context["preselected_task_list"])
+        self.assertContains(response, "Solo se muestran listas del tablero actual.")
+
+    def test_board_task_create_creates_task_in_selected_list_and_redirects_to_detail(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            f'{reverse("board_task_create", args=[self.board_a.pk])}?task_list={self.todo_a.pk}',
+            {
+                "title": "Plan de release",
+                "description": "Cerrar la tarea desde el tablero",
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_HIGH,
+                "assignee": "",
+                "due_date": "",
+                "tags": [],
+            },
+        )
+
+        task = Task.objects.get(title="Plan de release")
+
+        self.assertEqual(task.task_list, self.todo_a)
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        self.assertContains(board_detail_response, "Plan de release")
+
+    def test_board_task_create_rejects_task_list_from_another_board_same_owner(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_task_list = TaskList.objects.create(board=other_board, name="Later", position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_create", args=[self.board_a.pk]),
+            {
+                "title": "Wrong board task",
+                "description": "",
+                "task_list": other_task_list.pk,
+                "priority": Task.PRIORITY_MEDIUM,
+                "assignee": "",
+                "due_date": "",
+                "tags": [],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("task_list", form.errors)
+        self.assertTrue(
+            any("Select a valid choice." in error for error in form.errors["task_list"]),
+        )
+        self.assertFalse(Task.objects.filter(title="Wrong board task").exists())
+
+    def test_board_task_create_for_board_without_lists_keeps_existing_empty_state(self):
+        board_without_lists = Board.objects.create(name="Board Empty", owner=self.user_a)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_create", args=[board_without_lists.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["task_list_count"], 0)
+        self.assertContains(response, "Este tablero aún no tiene listas. Añade una lista antes de crear tareas.")
+
     def test_task_create_form_only_exposes_owned_task_lists(self):
         self.client.force_login(self.user_a)
 

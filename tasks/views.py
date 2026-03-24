@@ -169,11 +169,21 @@ def task_detail(request, pk):
 @login_required
 def task_create(request, board_pk=None):
     board = None
+    preselected_task_list = None
     if board_pk is not None:
         board = get_object_or_404(
             Board.objects.filter(owner=request.user).prefetch_related("task_lists"),
             pk=board_pk,
         )
+        requested_task_list_pk = request.GET.get("task_list")
+        if requested_task_list_pk:
+            try:
+                requested_task_list_pk = int(requested_task_list_pk)
+            except (TypeError, ValueError):
+                requested_task_list_pk = None
+
+        if requested_task_list_pk is not None:
+            preselected_task_list = board.task_lists.filter(pk=requested_task_list_pk).first()
 
     if request.method == 'POST':
         form = TaskForm(request.POST, board=board, user=request.user)
@@ -181,16 +191,30 @@ def task_create(request, board_pk=None):
             task = form.save()
             return redirect('board_detail', pk=task.task_list.board_id)
     else:
-        form = TaskForm(board=board, user=request.user)
+        form_kwargs = {
+            "board": board,
+            "user": request.user,
+        }
+        if preselected_task_list is not None:
+            form_kwargs["initial"] = {"task_list": preselected_task_list.pk}
+        form = TaskForm(**form_kwargs)
+
+    screen_subtitle = 'Crea una nueva tarea dentro del tablero actual.' if board else 'Crea una nueva tarea y asígnala a una lista existente.'
+    panel_subtitle = 'Selecciona una de las listas del tablero para guardar la tarea.' if board else 'Completa los campos principales para guardar la tarea.'
+
+    if preselected_task_list is not None:
+        screen_subtitle = 'Crea una nueva tarea dentro de la lista seleccionada.'
+        panel_subtitle = 'La lista inicial llega preseleccionada, pero puedes cambiarla dentro de este tablero.'
 
     context = {
         'form': form,
         'board': board,
+        'preselected_task_list': preselected_task_list,
         'page_title': 'Nueva tarea',
         'screen_title': 'Nueva tarea',
-        'screen_subtitle': 'Crea una nueva tarea dentro del tablero actual.' if board else 'Crea una nueva tarea y asígnala a una lista existente.',
+        'screen_subtitle': screen_subtitle,
         'panel_title': 'Detalles de la tarea',
-        'panel_subtitle': 'Selecciona una de las listas del tablero para guardar la tarea.' if board else 'Completa los campos principales para guardar la tarea.',
+        'panel_subtitle': panel_subtitle,
         'submit_label': 'Guardar tarea',
         'cancel_url': 'board_detail' if board else 'board_list',
         'cancel_url_kwargs': {'pk': board.pk} if board else None,

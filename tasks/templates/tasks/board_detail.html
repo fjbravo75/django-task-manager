@@ -66,13 +66,22 @@
                 <div class="mt-8 space-y-8">
                     {% for item in board_task_lists %}
                         <section class="rounded-2xl border border-slate-200 bg-slate-50 p-6 lg:p-7">
-                            <header>
-                                <h3 class="text-2xl font-semibold tracking-tight text-slate-900">
-                                    {{ item.task_list.name }}
-                                </h3>
-                                <p class="mt-2 text-sm text-slate-500">
-                                    {{ item.total_tasks }} tarea{{ item.total_tasks|pluralize:"s" }}
-                                </p>
+                            <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h3 class="text-2xl font-semibold tracking-tight text-slate-900">
+                                        {{ item.task_list.name }}
+                                    </h3>
+                                    <p class="mt-2 text-sm text-slate-500">
+                                        {{ item.total_tasks }} tarea{{ item.total_tasks|pluralize:"s" }}
+                                    </p>
+                                </div>
+
+                                <a
+                                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    href="{% url 'board_task_create' board.pk %}?task_list={{ item.task_list.pk }}"
+                                >
+                                    Nueva tarea
+                                </a>
                             </header>
 
                             <div class="mt-6 space-y-5">
@@ -204,6 +213,12 @@
                                         <p class="text-sm leading-6 text-slate-500">
                                             Esta lista todavía no tiene tareas.
                                         </p>
+                                        <a
+                                            class="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                            href="{% url 'board_task_create' board.pk %}?task_list={{ item.task_list.pk }}"
+                                        >
+                                            Crear la primera tarea
+                                        </a>
                                     </div>
                                 {% endif %}
                             </div>
