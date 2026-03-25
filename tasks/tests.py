@@ -135,6 +135,17 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Task.objects.filter(pk=self.task_b.pk).exists())
 
+    def test_task_delete_deletes_owned_task_and_removes_it_from_board_detail(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(reverse("task_delete", args=[self.task_a.pk]))
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertFalse(Task.objects.filter(pk=self.task_a.pk).exists())
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        self.assertNotContains(board_detail_response, "Task A")
+
     def test_board_task_create_rejects_foreign_board(self):
         self.client.force_login(self.user_a)
 
@@ -482,6 +493,21 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, self.task_a.get_priority_display())
         self.assertContains(response, reverse("task_detail", args=[self.task_a.pk]))
         self.assertContains(response, reverse("task_update", args=[self.task_a.pk]))
+        self.assertContains(response, reverse("task_delete", args=[self.task_a.pk]))
+
+    def test_board_detail_shows_task_delete_action_for_hidden_task(self):
+        hidden_task = self.task_a
+        for index in range(5):
+            hidden_task = Task.objects.create(
+                title=f"Task hidden {index}",
+                task_list=self.todo_a,
+            )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("task_delete", args=[hidden_task.pk]))
 
     def test_board_task_move_moves_task_to_another_list_and_redirects_to_detail(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
