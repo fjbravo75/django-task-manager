@@ -98,6 +98,55 @@ def board_task_list_create(request, board_pk):
 
 
 @login_required
+def board_task_list_update(request, board_pk, pk):
+    task_list = _get_owned_task_list(request.user, board_pk, pk)
+    board = task_list.board
+
+    if request.method == "POST":
+        form = TaskListForm(request.POST, instance=task_list, board=board)
+        if form.is_valid():
+            form.save()
+            return redirect("board_detail", pk=board.pk)
+    else:
+        form = TaskListForm(instance=task_list, board=board)
+
+    context = {
+        "form": form,
+        "board": board,
+        "task_list": task_list,
+        "page_title": f"Renombrar {task_list.name}",
+        "screen_title": "Renombrar lista",
+        "screen_subtitle": "Actualiza el nombre de esta lista dentro del tablero actual.",
+        "panel_title": "Nombre de la lista",
+        "panel_subtitle": "Solo puedes cambiar el nombre; el tablero y la posición actual se mantienen en servidor.",
+        "submit_label": "Guardar cambios",
+    }
+    return render(request, "tasks/task_list_form.html", context)
+
+
+@login_required
+def board_task_list_delete(request, board_pk, pk):
+    task_list = _get_owned_task_list(request.user, board_pk, pk)
+    board = task_list.board
+
+    if request.method == "POST":
+        task_list.delete()
+        return redirect("board_detail", pk=board.pk)
+
+    context = {
+        "board": board,
+        "task_list": task_list,
+        "task_count": task_list.tasks.count(),
+        "page_title": f"Eliminar {task_list.name}",
+        "screen_title": "Eliminar lista",
+        "screen_subtitle": "Confirma si quieres borrar esta lista de forma definitiva.",
+        "panel_title": "Confirmación de borrado",
+        "panel_subtitle": "Las tareas asociadas a esta lista se eliminarán junto con ella.",
+    }
+    return render(request, "tasks/task_list_confirm_delete.html", context)
+
+
+@login_required
 def board_detail(request, pk):
     board = _get_owned_board_with_tasks(request.user, pk)
     return render(
@@ -123,6 +172,14 @@ def _get_owned_board_with_tasks(user, board_pk):
             )
         ),
         pk=board_pk,
+    )
+
+
+def _get_owned_task_list(user, board_pk, task_list_pk):
+    return get_object_or_404(
+        TaskList.objects.filter(board__owner=user).select_related("board", "board__owner"),
+        board_id=board_pk,
+        pk=task_list_pk,
     )
 
 

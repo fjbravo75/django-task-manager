@@ -1,12 +1,27 @@
 from django.urls import path
 
-from tasks.views import board_create, board_detail, board_list, board_task_list_create, board_task_move, task_create, task_delete, task_detail, task_list, task_update
+from tasks.views import (
+    board_create,
+    board_detail,
+    board_list,
+    board_task_list_create,
+    board_task_list_delete,
+    board_task_list_update,
+    board_task_move,
+    task_create,
+    task_delete,
+    task_detail,
+    task_list,
+    task_update,
+)
 
 urlpatterns = [
     path("", board_list, name="board_list"),
     path("boards/create/", board_create, name="board_create"),
     path("boards/<int:pk>/", board_detail, name="board_detail"),
     path("boards/<int:board_pk>/lists/create/", board_task_list_create, name="board_task_list_create"),
+    path("boards/<int:board_pk>/lists/<int:pk>/edit/", board_task_list_update, name="board_task_list_update"),
+    path("boards/<int:board_pk>/lists/<int:pk>/delete/", board_task_list_delete, name="board_task_list_delete"),
     path("boards/<int:board_pk>/tasks/create/", task_create, name="board_task_create"),
     path("boards/<int:board_pk>/tasks/<int:pk>/move/", board_task_move, name="board_task_move"),
     path("tasks/", task_list, name="task_list"),

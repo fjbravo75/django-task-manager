@@ -201,6 +201,130 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(TaskList.objects.filter(board=self.board_a, name="Todo").count(), 1)
         self.assertIn("name", response.context["form"].errors)
 
+    def test_board_task_list_update_requires_authentication(self):
+        response = self.client.get(
+            reverse("board_task_list_update", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_task_list_update", args=[self.board_a.pk, self.todo_a.pk]), response.url)
+
+    def test_board_task_list_update_rejects_foreign_task_list(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("board_task_list_update", args=[self.board_b.pk, self.todo_b.pk]),
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_task_list_update_form_only_exposes_name(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("board_task_list_update", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["form"].fields.keys()), ["name"])
+        self.assertContains(response, self.board_a.name)
+
+    def test_board_task_list_update_keeps_board_and_position_in_server(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_list_update", args=[self.board_a.pk, self.todo_a.pk]),
+            {
+                "name": "Backlog",
+                "board": self.board_b.pk,
+                "position": 999,
+            },
+        )
+
+        self.todo_a.refresh_from_db()
+
+        self.assertEqual(self.todo_a.name, "Backlog")
+        self.assertEqual(self.todo_a.board, self.board_a)
+        self.assertNotEqual(self.todo_a.board, self.board_b)
+        self.assertEqual(self.todo_a.position, 1)
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+
+    def test_board_task_list_update_rejects_duplicate_name_within_same_board(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_list_update", args=[self.board_a.pk, doing.pk]),
+            {
+                "name": "Todo",
+            },
+        )
+
+        doing.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(doing.name, "Doing")
+        self.assertIn("name", response.context["form"].errors)
+
+    def test_board_task_list_delete_requires_authentication(self):
+        response = self.client.get(
+            reverse("board_task_list_delete", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_task_list_delete", args=[self.board_a.pk, self.todo_a.pk]), response.url)
+
+    def test_board_task_list_delete_rejects_foreign_task_list(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_list_delete", args=[self.board_b.pk, self.todo_b.pk]),
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(TaskList.objects.filter(pk=self.todo_b.pk).exists())
+
+    def test_board_task_list_delete_renders_confirmation(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("board_task_list_delete", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Eliminar lista")
+        self.assertContains(response, "Confirmar borrado")
+        self.assertContains(response, self.todo_a.name)
+        self.assertContains(response, "Tareas asociadas")
+
+    def test_board_task_list_delete_deletes_task_list_and_redirects_to_board_detail(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_list_delete", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertFalse(TaskList.objects.filter(pk=self.todo_a.pk).exists())
+        self.assertFalse(Task.objects.filter(pk=self.task_a.pk).exists())
+
+    def test_board_detail_shows_task_list_management_ctas(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("board_task_list_update", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+        self.assertContains(
+            response,
+            reverse("board_task_list_delete", args=[self.board_a.pk, self.todo_a.pk]),
+        )
+        self.assertContains(response, "Editar nombre")
+        self.assertContains(response, "Borrar lista")
+
     def test_board_detail_shows_task_create_cta_for_each_task_list(self):
         empty_task_list = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
         self.client.force_login(self.user_a)

@@ -67,21 +67,41 @@
                     {% for item in board_task_lists %}
                         <section class="rounded-2xl border border-slate-200 bg-slate-50 p-6 lg:p-7">
                             <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                    <h3 class="text-2xl font-semibold tracking-tight text-slate-900">
-                                        {{ item.task_list.name }}
-                                    </h3>
-                                    <p class="mt-2 text-sm text-slate-500">
+                                <div class="space-y-2">
+                                    <div class="flex flex-wrap items-center gap-4">
+                                        <h3 class="text-2xl font-semibold tracking-tight text-slate-900">
+                                            {{ item.task_list.name }}
+                                        </h3>
+
+                                        <div class="flex flex-wrap items-center gap-4 text-sm font-medium text-slate-600">
+                                            <a
+                                                class="inline-flex items-center transition hover:text-slate-900"
+                                                href="{% url 'board_task_list_update' board.pk item.task_list.pk %}"
+                                            >
+                                                Editar nombre
+                                            </a>
+                                            <a
+                                                class="inline-flex items-center transition hover:text-slate-900"
+                                                href="{% url 'board_task_list_delete' board.pk item.task_list.pk %}"
+                                            >
+                                                Borrar lista
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-slate-500">
                                         {{ item.total_tasks }} tarea{{ item.total_tasks|pluralize:"s" }}
                                     </p>
                                 </div>
 
-                                <a
-                                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                                    href="{% url 'board_task_create' board.pk %}?task_list={{ item.task_list.pk }}"
-                                >
-                                    Nueva tarea
-                                </a>
+                                <div class="flex items-start sm:justify-end">
+                                    <a
+                                        class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                        href="{% url 'board_task_create' board.pk %}?task_list={{ item.task_list.pk }}"
+                                    >
+                                        Nueva tarea
+                                    </a>
+                                </div>
                             </header>
 
                             <div class="mt-6 space-y-5">
