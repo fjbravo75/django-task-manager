@@ -5,7 +5,7 @@ from django.db.models import Max, Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import BoardForm, RegisterForm, TaskForm, TaskListForm, TaskMoveForm
+from tasks.forms import BoardForm, RegisterForm, TagForm, TaskForm, TaskListForm, TaskMoveForm
 from tasks.models import Board, Task, TaskList
 
 
@@ -153,6 +153,34 @@ def board_task_list_create(request, board_pk):
         "panel_title": "Detalles de la lista",
         "panel_subtitle": "Define el nombre de la lista que quieres añadir a este tablero.",
         "submit_label": "Guardar lista",
+    }
+    return render(request, "tasks/task_list_form.html", context)
+
+
+@login_required
+def board_tag_create(request, board_pk):
+    board = get_object_or_404(
+        Board.objects.filter(owner=request.user).select_related("owner"),
+        pk=board_pk,
+    )
+
+    if request.method == "POST":
+        form = TagForm(request.POST, board=board)
+        if form.is_valid():
+            form.save()
+            return redirect("board_detail", pk=board.pk)
+    else:
+        form = TagForm(board=board)
+
+    context = {
+        "form": form,
+        "board": board,
+        "page_title": "Nueva etiqueta",
+        "screen_title": "Nueva etiqueta",
+        "screen_subtitle": "Crea una etiqueta reutilizable dentro del tablero actual.",
+        "panel_title": "Nombre de la etiqueta",
+        "panel_subtitle": "La etiqueta quedará disponible para las tareas de este tablero.",
+        "submit_label": "Guardar etiqueta",
     }
     return render(request, "tasks/task_list_form.html", context)
 
@@ -318,20 +346,18 @@ def task_detail(request, pk):
 def task_create(request, board_pk=None):
     board = None
     preselected_task_list = None
+    requested_task_list_pk = request.GET.get("task_list")
+    requested_task_list = _get_requested_task_list_for_user(request.user, requested_task_list_pk)
     if board_pk is not None:
         board = get_object_or_404(
             Board.objects.filter(owner=request.user).prefetch_related("task_lists"),
             pk=board_pk,
         )
-        requested_task_list_pk = request.GET.get("task_list")
-        if requested_task_list_pk:
-            try:
-                requested_task_list_pk = int(requested_task_list_pk)
-            except (TypeError, ValueError):
-                requested_task_list_pk = None
-
-        if requested_task_list_pk is not None:
-            preselected_task_list = board.task_lists.filter(pk=requested_task_list_pk).first()
+        if requested_task_list is not None and requested_task_list.board_id == board.pk:
+            preselected_task_list = requested_task_list
+    elif requested_task_list is not None:
+        preselected_task_list = requested_task_list
+        board = requested_task_list.board
 
     if request.method == 'POST':
         form = TaskForm(request.POST, board=board, user=request.user)
@@ -366,6 +392,8 @@ def task_create(request, board_pk=None):
         'cancel_url': 'board_detail' if board else 'board_list',
         'cancel_url_kwargs': {'pk': board.pk} if board else None,
         'task_list_count': form.fields["task_list"].queryset.count(),
+        'show_tags': "tags" in form.fields,
+        'tag_count': form.fields["tags"].queryset.count() if "tags" in form.fields else 0,
     }
     return render(request, 'tasks/task_form.html', context)
 
@@ -399,6 +427,8 @@ def task_update(request, pk):
         'cancel_url': 'board_detail',
         'cancel_url_kwargs': {'pk': board.pk},
         'task_list_count': form.fields["task_list"].queryset.count(),
+        'show_tags': "tags" in form.fields,
+        'tag_count': form.fields["tags"].queryset.count() if "tags" in form.fields else 0,
     }
     return render(request, 'tasks/task_form.html', context)
 
@@ -442,3 +472,17 @@ def board_task_move(request, board_pk, pk):
 
     context = _build_board_detail_context(board, bound_move_form=form)
     return render(request, "tasks/board_detail.html", context, status=200)
+
+
+def _get_requested_task_list_for_user(user, requested_task_list_pk):
+    try:
+        requested_task_list_pk = int(requested_task_list_pk)
+    except (TypeError, ValueError):
+        return None
+
+    return (
+        TaskList.objects.filter(board__owner=user)
+        .select_related("board", "board__owner")
+        .filter(pk=requested_task_list_pk)
+        .first()
+    )

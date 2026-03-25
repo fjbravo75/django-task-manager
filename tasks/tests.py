@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from tasks.models import Board, Task, TaskList
+from tasks.models import Board, Tag, Task, TaskList
 
 
 class BoardTaskAuthorizationTests(TestCase):
@@ -153,6 +153,15 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, reverse("board_task_list_create", args=[self.board_a.pk]))
         self.assertContains(response, "Nueva lista")
 
+    def test_board_detail_shows_tag_create_link(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("board_tag_create", args=[self.board_a.pk]))
+        self.assertContains(response, "Nueva etiqueta")
+
     def test_board_create_assigns_owner_in_server_and_redirects_to_detail(self):
         self.client.force_login(self.user_a)
 
@@ -291,6 +300,60 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TaskList.objects.filter(board=self.board_a, name="Todo").count(), 1)
+        self.assertIn("name", response.context["form"].errors)
+
+    def test_board_tag_create_requires_authentication(self):
+        response = self.client.get(reverse("board_tag_create", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_tag_create", args=[self.board_a.pk]), response.url)
+
+    def test_board_tag_create_rejects_foreign_board(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_tag_create", args=[self.board_b.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_tag_create_form_only_exposes_name(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_tag_create", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["form"].fields.keys()), ["name"])
+        self.assertContains(response, self.board_a.name)
+
+    def test_board_tag_create_assigns_board_in_server_and_redirects(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_tag_create", args=[self.board_a.pk]),
+            {
+                "name": "Backend",
+                "board": self.board_b.pk,
+            },
+        )
+
+        tag = Tag.objects.get(board=self.board_a, name="Backend")
+
+        self.assertEqual(tag.board, self.board_a)
+        self.assertNotEqual(tag.board, self.board_b)
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+
+    def test_board_tag_create_rejects_duplicate_name_within_same_board(self):
+        Tag.objects.create(board=self.board_a, name="Backend")
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_tag_create", args=[self.board_a.pk]),
+            {
+                "name": "Backend",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Tag.objects.filter(board=self.board_a, name="Backend").count(), 1)
         self.assertIn("name", response.context["form"].errors)
 
     def test_board_task_list_update_requires_authentication(self):
@@ -480,6 +543,8 @@ class BoardTaskAuthorizationTests(TestCase):
         )
 
     def test_board_task_create_form_does_not_expose_assignee(self):
+        tag_a = Tag.objects.create(board=self.board_a, name="Backend")
+        Tag.objects.create(board=self.board_b, name="Urgente")
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_task_create", args=[self.board_a.pk]))
@@ -490,9 +555,32 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertIn("priority", form.fields)
         self.assertIn("due_date", form.fields)
         self.assertIn("tags", form.fields)
+        self.assertEqual(list(form.fields["tags"].queryset), [tag_a])
         self.assertNotIn("assignee", form.fields)
         self.assertNotContains(response, "Asignado a")
         self.assertContains(response, "Solo se muestran listas del tablero actual.")
+
+    def test_board_task_create_renders_tags_as_checkbox_list_with_multiple_choice_hint(self):
+        Tag.objects.create(board=self.board_a, name="Backend")
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_create", args=[self.board_a.pk]))
+        form = response.context["form"]
+
+        self.assertEqual(form.fields["tags"].widget.__class__.__name__, "CheckboxSelectMultiple")
+        self.assertEqual(form.fields["tags"].widget.attrs["class"], "task-form-tag-checkbox")
+        self.assertContains(response, "(marca varias)")
+        self.assertContains(response, 'task-form-bottom-grid', html=False)
+        self.assertContains(response, 'task-form-bottom-main', html=False)
+        self.assertContains(response, 'task-form-bottom-side', html=False)
+        self.assertContains(response, 'task-form-tag-select', html=False)
+        self.assertContains(response, 'task-form-tag-options', html=False)
+        self.assertContains(response, 'task-form-tag-option', html=False)
+        self.assertContains(response, 'task-form-tag-option__label', html=False)
+        self.assertContains(response, 'task-form-tag-checkbox', html=False)
+        self.assertContains(response, 'name="tags"', html=False)
+        self.assertContains(response, 'type="checkbox"', html=False)
+        self.assertNotContains(response, 'id="id_tags"', html=False)
 
     def test_board_task_create_ignores_task_list_query_param_from_another_board(self):
         other_board = Board.objects.create(name="Board C", owner=self.user_a)
@@ -557,6 +645,27 @@ class BoardTaskAuthorizationTests(TestCase):
         )
         self.assertFalse(Task.objects.filter(title="Wrong board task").exists())
 
+    def test_board_task_create_rejects_tag_from_another_board_same_owner(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_tag = Tag.objects.create(board=other_board, name="Later")
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_create", args=[self.board_a.pk]),
+            {
+                "title": "Wrong board tag",
+                "description": "",
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_MEDIUM,
+                "due_date": "",
+                "tags": [other_tag.pk],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("tags", response.context["form"].errors)
+        self.assertFalse(Task.objects.filter(title="Wrong board tag").exists())
+
     def test_board_task_create_for_board_without_lists_keeps_existing_empty_state(self):
         board_without_lists = Board.objects.create(name="Board Empty", owner=self.user_a)
         self.client.force_login(self.user_a)
@@ -568,13 +677,58 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Este tablero aún no tiene listas. Añade una lista antes de crear tareas.")
 
     def test_task_update_form_does_not_expose_assignee(self):
+        tag_a = Tag.objects.create(board=self.board_a, name="Backend")
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        Tag.objects.create(board=other_board, name="Later")
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("task_update", args=[self.task_a.pk]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["form"].fields["tags"].queryset), [tag_a])
         self.assertNotIn("assignee", response.context["form"].fields)
         self.assertNotContains(response, "Asignado a")
+
+    def test_task_update_keeps_selected_tags_bound_in_checkbox_list(self):
+        tag_a = Tag.objects.create(board=self.board_a, name="Backend")
+        tag_b = Tag.objects.create(board=self.board_a, name="API")
+        self.task_a.tags.set([tag_a, tag_b])
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_update", args=[self.task_a.pk]))
+        selected_values = {str(value) for value in response.context["form"]["tags"].value()}
+
+        self.assertEqual(response.context["form"].fields["tags"].widget.__class__.__name__, "CheckboxSelectMultiple")
+        self.assertEqual(response.context["form"].fields["tags"].widget.attrs["class"], "task-form-tag-checkbox")
+        self.assertEqual(selected_values, {str(tag_a.pk), str(tag_b.pk)})
+        self.assertContains(response, "(marca varias)")
+        self.assertContains(response, 'task-form-bottom-side', html=False)
+        self.assertContains(response, 'task-form-tag-options', html=False)
+        self.assertContains(response, 'checked', html=False)
+
+    def test_task_update_rejects_tag_from_another_board_same_owner(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_tag = Tag.objects.create(board=other_board, name="Later")
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("task_update", args=[self.task_a.pk]),
+            {
+                "title": "Task A",
+                "description": "Updated from the UI",
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_MEDIUM,
+                "due_date": "",
+                "tags": [other_tag.pk],
+            },
+        )
+
+        self.task_a.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("tags", response.context["form"].errors)
+        self.assertEqual(self.task_a.task_list, self.todo_a)
+        self.assertFalse(self.task_a.tags.exists())
 
     def test_board_detail_shows_priority_badge_and_task_actions_for_visible_task(self):
         self.client.force_login(self.user_a)
@@ -600,6 +754,17 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("task_delete", args=[hidden_task.pk]))
+
+    def test_board_detail_and_task_detail_show_task_tags(self):
+        tag_a = Tag.objects.create(board=self.board_a, name="Backend")
+        self.task_a.tags.add(tag_a)
+        self.client.force_login(self.user_a)
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        task_detail_response = self.client.get(reverse("task_detail", args=[self.task_a.pk]))
+
+        self.assertContains(board_detail_response, "Etiquetas: Backend")
+        self.assertContains(task_detail_response, "Backend")
 
     def test_board_task_move_moves_task_to_another_list_and_redirects_to_detail(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
@@ -655,6 +820,7 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(self.task_b.task_list, self.todo_b)
 
     def test_task_create_form_only_exposes_owned_task_lists(self):
+        Tag.objects.create(board=self.board_a, name="Backend")
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("task_create"))
@@ -662,6 +828,20 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         task_list_field = response.context["form"].fields["task_list"]
         self.assertEqual(list(task_list_field.queryset), [self.todo_a])
+        self.assertNotIn("tags", response.context["form"].fields)
+        self.assertContains(response, "Las etiquetas se asignan cuando la tarea se crea desde un tablero concreto.")
+
+    def test_task_create_with_owned_task_list_query_param_exposes_matching_board_tags(self):
+        tag_a = Tag.objects.create(board=self.board_a, name="Backend")
+        Tag.objects.create(board=self.board_b, name="Urgente")
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(f'{reverse("task_create")}?task_list={self.todo_a.pk}')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["board"], self.board_a)
+        self.assertEqual(response.context["preselected_task_list"], self.todo_a)
+        self.assertEqual(list(response.context["form"].fields["tags"].queryset), [tag_a])
 
     def test_task_create_rejects_foreign_task_list_submission(self):
         self.client.force_login(self.user_a)
