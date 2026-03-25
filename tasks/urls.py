@@ -2,12 +2,14 @@ from django.urls import path
 
 from tasks.views import (
     board_create,
+    board_delete,
     board_detail,
     board_list,
     board_task_list_create,
     board_task_list_delete,
     board_task_list_update,
     board_task_move,
+    board_update,
     task_create,
     task_delete,
     task_detail,
@@ -18,6 +20,8 @@ from tasks.views import (
 urlpatterns = [
     path("", board_list, name="board_list"),
     path("boards/create/", board_create, name="board_create"),
+    path("boards/<int:pk>/edit/", board_update, name="board_update"),
+    path("boards/<int:pk>/delete/", board_delete, name="board_delete"),
     path("boards/<int:pk>/", board_detail, name="board_detail"),
     path("boards/<int:board_pk>/lists/create/", board_task_list_create, name="board_task_list_create"),
     path("boards/<int:board_pk>/lists/<int:pk>/edit/", board_task_list_update, name="board_task_list_update"),

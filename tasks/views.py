@@ -61,8 +61,68 @@ def board_create(request):
         "panel_title": "Detalles del tablero",
         "panel_subtitle": "Define el nombre y una breve descripción inicial del tablero.",
         "submit_label": "Guardar tablero",
+        "cancel_url": "board_list",
+        "cancel_url_kwargs": None,
+        "back_label": "Volver a tableros",
     }
     return render(request, "tasks/board_form.html", context)
+
+
+@login_required
+def board_update(request, pk):
+    board = get_object_or_404(
+        Board.objects.filter(owner=request.user).select_related("owner"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        form = BoardForm(request.POST, instance=board)
+        if form.is_valid():
+            board = form.save(commit=False)
+            board.owner = request.user
+            board.save()
+            return redirect("board_detail", pk=board.pk)
+    else:
+        form = BoardForm(instance=board)
+
+    context = {
+        "form": form,
+        "board": board,
+        "page_title": f"Editar {board.name}",
+        "screen_title": "Editar tablero",
+        "screen_subtitle": "Actualiza los datos básicos de este tablero.",
+        "panel_title": "Detalles del tablero",
+        "panel_subtitle": "Solo puedes cambiar el nombre y la descripción de este tablero.",
+        "submit_label": "Guardar cambios",
+        "cancel_url": "board_detail",
+        "cancel_url_kwargs": {"pk": board.pk},
+        "back_label": "Volver al tablero",
+    }
+    return render(request, "tasks/board_form.html", context)
+
+
+@login_required
+def board_delete(request, pk):
+    board = get_object_or_404(
+        Board.objects.filter(owner=request.user).select_related("owner"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        board.delete()
+        return redirect("board_list")
+
+    context = {
+        "board": board,
+        "task_list_count": board.task_lists.count(),
+        "task_count": Task.objects.filter(task_list__board=board).count(),
+        "page_title": f"Eliminar {board.name}",
+        "screen_title": "Eliminar tablero",
+        "screen_subtitle": "Confirma si quieres borrar este tablero de forma definitiva.",
+        "panel_title": "Confirmación de borrado",
+        "panel_subtitle": "Si confirmas, este tablero y todas sus listas y tareas asociadas se eliminarán para siempre.",
+    }
+    return render(request, "tasks/board_confirm_delete.html", context)
 
 
 @login_required

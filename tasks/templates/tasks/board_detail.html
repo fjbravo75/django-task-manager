@@ -49,6 +49,20 @@
 
                 <a
                     class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    href="{% url 'board_update' board.pk %}"
+                >
+                    Editar tablero
+                </a>
+
+                <a
+                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    href="{% url 'board_delete' board.pk %}"
+                >
+                    Borrar tablero
+                </a>
+
+                <a
+                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                     href="{% url 'task_list' %}"
                 >
                     Ver todas las tareas
