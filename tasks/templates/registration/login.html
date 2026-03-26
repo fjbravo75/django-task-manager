@@ -1,49 +1,66 @@
 {% extends 'tasks/base.html' %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Iniciar sesión{% endblock %}
 
 {% block content %}
-    <section class="page-section mx-auto max-w-md space-y-6 pt-2">
-        <header class="space-y-2">
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Iniciar sesión</h1>
-            <p class="text-sm leading-6 text-slate-600">
-                Accede con tu usuario para continuar.
-            </p>
-        </header>
+    <section class="page-section auth-page pt-2">
+        <div class="auth-shell">
+            <section class="auth-copy" aria-labelledby="login-copy-title">
+                <p class="auth-copy__welcome">Bienvenido a Gestor de tareas</p>
 
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/80 sm:p-8">
-            <form method="post" class="grid gap-5" novalidate>
-                {% csrf_token %}
+                <div class="auth-copy__body">
+                    <h1 class="auth-copy__title" id="login-copy-title">Organiza tu trabajo con claridad</h1>
+                    <p class="auth-copy__text">Reúne tus tableros, listas y tareas en un solo lugar. Ordena prioridades, sigue cada avance y mantén el foco sin complicarte.</p>
+                </div>
 
-                {% if form.non_field_errors %}
-                    <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                        {{ form.non_field_errors }}
+                <ul class="auth-copy__points" role="list">
+                    <li>Tableros claros para cada proyecto</li>
+                    <li>Listas y tareas fáciles de revisar</li>
+                    <li>Prioridades y fechas visibles de un vistazo</li>
+                </ul>
+
+                <p class="auth-copy__closing">Entra y sigue por donde lo dejaste.</p>
+            </section>
+
+            <section class="auth-card auth-card--compact" aria-label="Formulario de inicio de sesión">
+                <form method="post" class="auth-form auth-form--compact" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="auth-form-error" role="alert">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="auth-form__group">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="auth-form-error" role="alert">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
 
-                <div class="grid gap-2">
-                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-                    {{ form.username }}
-                    {{ form.username.errors }}
-                </div>
+                    <div class="auth-form__group">
+                        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="auth-form-error" role="alert">
+                                {{ form.password.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
 
-                <div class="grid gap-2">
-                    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
-                    {{ form.password }}
-                    {{ form.password.errors }}
-                </div>
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
 
-                {% if next %}
-                    <input type="hidden" name="next" value="{{ next }}">
-                {% endif %}
-
-                <button
-                    class="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    type="submit"
-                >
-                    Entrar
-                </button>
-            </form>
-        </section>
+                    <button class="auth-form__submit" type="submit">
+                        Entrar
+                    </button>
+                </form>
+            </section>
+        </div>
     </section>
 {% endblock %}

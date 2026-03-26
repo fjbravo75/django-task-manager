@@ -7,6 +7,154 @@ from django.urls import reverse
 from tasks.models import Board, Tag, Task, TaskList
 
 
+class AuthenticationFlowTests(TestCase):
+    def test_login_get_for_anonymous_user_renders_login_template(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "registration/login.html")
+        self.assertContains(response, "Bienvenido a Gestor de tareas")
+        self.assertContains(response, "Organiza tu trabajo con claridad")
+        self.assertContains(
+            response,
+            "Reúne tus tableros, listas y tareas en un solo lugar. Ordena prioridades, sigue cada avance y mantén el foco sin complicarte.",
+        )
+        self.assertContains(response, "Tableros claros para cada proyecto")
+        self.assertContains(response, "Listas y tareas fáciles de revisar")
+        self.assertContains(response, "Prioridades y fechas visibles de un vistazo")
+        self.assertContains(response, "Entra y sigue por donde lo dejaste.")
+
+    def test_login_shows_labels_in_spanish(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<label for=\"id_username\">Usuario</label>", html=True)
+        self.assertContains(response, "<label for=\"id_password\">Contraseña</label>", html=True)
+
+    def test_authenticated_user_is_redirected_away_from_login(self):
+        user = User.objects.create_user(username="alice", password="testpass123")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("login"))
+
+        self.assertRedirects(response, reverse("board_list"))
+
+    def test_login_with_invalid_credentials_shows_clear_error_message(self):
+        User.objects.create_user(username="alice", password="testpass123")
+
+        response = self.client.post(
+            reverse("login"),
+            {
+                "username": "alice",
+                "password": "wrongpass",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "registration/login.html")
+        self.assertContains(
+            response,
+            "No hemos podido iniciar sesión con esos datos. Revisa tu usuario y tu contraseña e inténtalo de nuevo.",
+        )
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_register_get_for_anonymous_user_renders_register_template(self):
+        response = self.client.get(reverse("register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "registration/register.html")
+        self.assertContains(response, "Bienvenido a Gestor de tareas")
+        self.assertContains(response, "Crea tu espacio de trabajo")
+        self.assertContains(
+            response,
+            "Empieza con una cuenta propia para gestionar proyectos, listas y tareas desde una interfaz clara y directa. Todo preparado para que puedas organizarte sin dar rodeos.",
+        )
+        self.assertContains(response, "Tableros para cada proyecto")
+        self.assertContains(response, "Seguimiento claro de tareas")
+        self.assertContains(response, "Prioridades y fechas siempre visibles")
+        self.assertContains(response, "Crea tu cuenta y empieza a organizarte.")
+        self.assertContains(response, "Hasta 50 caracteres. Puedes usar letras, números y @/./+/-/_.")
+        self.assertContains(response, "Tu contraseña debe contener al menos 8 caracteres.")
+        self.assertContains(response, "Repite la misma contraseña para confirmar que la has escrito bien.")
+
+    def test_register_valid_post_creates_user_logs_them_in_and_redirects(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "maria",
+                "password1": "ClaveSegura123",
+                "password2": "ClaveSegura123",
+            },
+        )
+
+        user = User.objects.get(username="maria")
+
+        self.assertRedirects(response, reverse("board_list"))
+        self.assertEqual(self.client.session.get("_auth_user_id"), str(user.pk))
+
+    def test_register_invalid_post_shows_mismatch_error_in_spanish(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "maria",
+                "password1": "ClaveSegura123",
+                "password2": "OtraClave123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "registration/register.html")
+        self.assertContains(
+            response,
+            "Las contraseñas no coinciden. Revisa ambos campos y vuelve a intentarlo.",
+        )
+
+    def test_register_invalid_post_shows_password_validator_error_in_spanish(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "maria",
+                "password1": "123",
+                "password2": "123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "registration/register.html")
+        self.assertContains(
+            response,
+            "La contraseña es demasiado corta. Debe contener por lo menos 8 caracteres.",
+        )
+
+    def test_register_invalid_post_shows_duplicate_username_error_in_spanish(self):
+        User.objects.create_user(username="maria", password="testpass123")
+
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "maria",
+                "password1": "ClaveSegura123",
+                "password2": "ClaveSegura123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "registration/register.html")
+        self.assertContains(
+            response,
+            "Ya existe una cuenta con ese nombre de usuario. Prueba con otro.",
+        )
+
+    def test_logout_logs_user_out_and_redirects_to_login(self):
+        user = User.objects.create_user(username="alice", password="testpass123")
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("logout"))
+
+        self.assertRedirects(response, reverse("login"))
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+
 class BoardTaskAuthorizationTests(TestCase):
     def setUp(self):
         self.user_a = User.objects.create_user(username="alice", password="testpass123")

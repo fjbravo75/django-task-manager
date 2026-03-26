@@ -1,11 +1,31 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
+from django.utils.translation import override
 
 from tasks.models import Board, Tag, Task, TaskList
 
 
+class LoginForm(AuthenticationForm):
+    error_messages = {
+        "invalid_login": "No hemos podido iniciar sesión con esos datos. Revisa tu usuario y tu contraseña e inténtalo de nuevo.",
+        "inactive": "Esta cuenta está desactivada en este momento.",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "Usuario"
+        self.fields["password"].label = "Contraseña"
+        self.fields["username"].error_messages["required"] = "Escribe tu usuario para continuar."
+        self.fields["password"].error_messages["required"] = "Escribe tu contraseña para continuar."
+
+
 class RegisterForm(UserCreationForm):
+    error_messages = {
+        **UserCreationForm.error_messages,
+        "password_mismatch": "Las contraseñas no coinciden. Revisa ambos campos y vuelve a intentarlo.",
+    }
+
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ["username", "password1", "password2"]
@@ -15,6 +35,33 @@ class RegisterForm(UserCreationForm):
         self.fields["username"].label = "Usuario"
         self.fields["password1"].label = "Contraseña"
         self.fields["password2"].label = "Confirmar contraseña"
+        self.fields["username"].help_text = "Hasta 50 caracteres. Puedes usar letras, números y @/./+/-/_."
+        self.fields["password1"].help_text = (
+            "<ul>"
+            "<li>Tu contraseña no puede parecerse demasiado a tu información personal.</li>"
+            "<li>Tu contraseña debe contener al menos 8 caracteres.</li>"
+            "<li>Tu contraseña no puede ser una clave demasiado común.</li>"
+            "<li>Tu contraseña no puede estar formada solo por números.</li>"
+            "</ul>"
+        )
+        self.fields["password2"].help_text = "Repite la misma contraseña para confirmar que la has escrito bien."
+        self.fields["username"].error_messages["required"] = "Escribe un nombre de usuario para crear tu cuenta."
+        self.fields["username"].error_messages["max_length"] = "El nombre de usuario no puede superar los 150 caracteres."
+        self.fields["password1"].error_messages["required"] = "Escribe una contraseña para continuar."
+        self.fields["password2"].error_messages["required"] = "Confirma la contraseña para continuar."
+        for validator in self.fields["username"].validators:
+            if hasattr(validator, "message"):
+                validator.message = "Introduce un nombre de usuario válido. Puedes usar letras, números y @/./+/-/_."
+
+    def clean_username(self):
+        username = self.cleaned_data.get("username")
+        if username and self._meta.model.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("Ya existe una cuenta con ese nombre de usuario. Prueba con otro.")
+        return username
+
+    def validate_password_for_user(self, user, password_field_name="password2"):
+        with override("es"):
+            super().validate_password_for_user(user, password_field_name=password_field_name)
 
 
 class BoardForm(forms.ModelForm):
