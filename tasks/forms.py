@@ -110,11 +110,12 @@ class TaskForm(forms.ModelForm):
 
     class Meta:
         model = Task
-        fields = ["title", "description", "task_list", "priority", "due_date", "tags"]
+        fields = ["title", "description", "task_list", "assignee", "priority", "due_date", "tags"]
         labels = {
             "title": "Título",
             "description": "Descripción",
             "task_list": "Lista",
+            "assignee": "Asignada a",
             "priority": "Prioridad",
             "tags": "Etiquetas",
         }
@@ -127,24 +128,59 @@ class TaskForm(forms.ModelForm):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.board = board
+        assignee_board = self._resolve_assignee_board(board=board, user=user)
         task_list_queryset = self.fields["task_list"].queryset.select_related("board")
         tag_queryset = self.fields["tags"].queryset.select_related("board")
+        assignee_queryset = self.fields["assignee"].queryset
 
         if board is not None:
             task_list_queryset = task_list_queryset.filter(board=board)
             tag_queryset = tag_queryset.filter(board=board)
+            assignee_queryset = assignee_queryset.filter(pk=board.owner_id)
         elif user is not None and user.is_authenticated:
             task_list_queryset = task_list_queryset.filter(board__owner=user)
             tag_queryset = tag_queryset.none()
+            if assignee_board is not None:
+                assignee_queryset = assignee_queryset.filter(pk=assignee_board.owner_id)
+            else:
+                assignee_queryset = assignee_queryset.filter(pk=user.pk)
         else:
             task_list_queryset = task_list_queryset.none()
             tag_queryset = tag_queryset.none()
+            assignee_queryset = assignee_queryset.none()
 
         self.fields["task_list"].queryset = task_list_queryset.order_by("board__name", "position", "name")
+        self.fields["assignee"].queryset = assignee_queryset.order_by("username")
+        self.fields["assignee"].empty_label = "Sin asignar"
         if board is None:
             self.fields.pop("tags")
         else:
             self.fields["tags"].queryset = tag_queryset.order_by("board__name", "name")
+
+    def _resolve_assignee_board(self, *, board, user):
+        if board is not None:
+            return board
+
+        if self.instance.pk and self.instance.task_list_id:
+            return self.instance.task_list.board
+
+        if user is None or not user.is_authenticated:
+            return None
+
+        task_list_pk = self.data.get(self.add_prefix("task_list"))
+        if task_list_pk is None:
+            task_list_pk = self.initial.get("task_list")
+
+        if task_list_pk in (None, ""):
+            return None
+
+        task_list = (
+            TaskList.objects.filter(board__owner=user)
+            .select_related("board")
+            .filter(pk=task_list_pk)
+            .first()
+        )
+        return task_list.board if task_list is not None else None
 
 
 class TaskMoveForm(forms.Form):
