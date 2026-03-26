@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -743,6 +745,66 @@ class BoardTaskAuthorizationTests(TestCase):
         board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
         self.assertContains(board_detail_response, "Plan de release")
 
+    def test_board_task_create_persists_priority_and_due_date_and_renders_them_across_views(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_task_create", args=[self.board_a.pk]),
+            {
+                "title": "Task with due date",
+                "description": "Task metadata roundtrip",
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_HIGH,
+                "due_date": "2026-03-28",
+                "tags": [],
+            },
+        )
+
+        task = Task.objects.get(title="Task with due date")
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertEqual(task.priority, Task.PRIORITY_HIGH)
+        self.assertEqual(task.due_date, date(2026, 3, 28))
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        task_detail_response = self.client.get(reverse("task_detail", args=[task.pk]))
+        task_list_response = self.client.get(reverse("task_list"))
+
+        self.assertContains(board_detail_response, "Task with due date")
+        self.assertContains(board_detail_response, task.get_priority_display())
+        self.assertContains(board_detail_response, "Vence 28 mar 2026")
+        self.assertNotContains(board_detail_response, "Fecha límite: 28/03/2026")
+        self.assertNotContains(board_detail_response, "bg-amber-100", html=False)
+        self.assertNotContains(board_detail_response, "text-amber-700", html=False)
+
+        self.assertContains(task_detail_response, task.get_priority_display())
+        self.assertContains(task_detail_response, "28/03/2026")
+
+        self.assertContains(task_list_response, "Task with due date")
+        self.assertContains(task_list_response, task.get_priority_display())
+        self.assertContains(task_list_response, "Fecha límite: 28/03/2026")
+
+    def test_task_create_with_owned_task_list_query_param_persists_priority_and_due_date(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            f'{reverse("task_create")}?task_list={self.todo_a.pk}',
+            {
+                "title": "Task created from global form",
+                "description": "Board inferred from task list",
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_LOW,
+                "due_date": "2026-04-09",
+            },
+        )
+
+        task = Task.objects.get(title="Task created from global form")
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertEqual(task.task_list, self.todo_a)
+        self.assertEqual(task.priority, Task.PRIORITY_LOW)
+        self.assertEqual(task.due_date, date(2026, 4, 9))
+
     def test_board_task_create_creates_task_with_assignee(self):
         self.client.force_login(self.user_a)
 
@@ -876,6 +938,44 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
         self.assertEqual(self.task_a.assignee, self.user_a)
 
+    def test_task_update_persists_priority_and_modified_due_date_and_renders_updated_values(self):
+        self.task_a.priority = Task.PRIORITY_LOW
+        self.task_a.due_date = date(2026, 1, 10)
+        self.task_a.save(update_fields=["priority", "due_date"])
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("task_update", args=[self.task_a.pk]),
+            {
+                "title": "Task A",
+                "description": "Updated metadata from the UI",
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_HIGH,
+                "due_date": "2026-04-12",
+                "tags": [],
+            },
+        )
+
+        self.task_a.refresh_from_db()
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertEqual(self.task_a.priority, Task.PRIORITY_HIGH)
+        self.assertEqual(self.task_a.due_date, date(2026, 4, 12))
+
+        board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        task_detail_response = self.client.get(reverse("task_detail", args=[self.task_a.pk]))
+        task_list_response = self.client.get(reverse("task_list"))
+
+        self.assertContains(board_detail_response, self.task_a.get_priority_display())
+        self.assertContains(board_detail_response, "Vence 12 abr 2026")
+        self.assertNotContains(board_detail_response, "Fecha límite: 12/04/2026")
+
+        self.assertContains(task_detail_response, self.task_a.get_priority_display())
+        self.assertContains(task_detail_response, "12/04/2026")
+
+        self.assertContains(task_list_response, self.task_a.get_priority_display())
+        self.assertContains(task_list_response, "Fecha límite: 12/04/2026")
+
     def test_task_update_can_clear_assignee(self):
         self.task_a.assignee = self.user_a
         self.task_a.save(update_fields=["assignee"])
@@ -964,6 +1064,27 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("task_delete", args=[hidden_task.pk]))
+
+    def test_board_detail_shows_compact_due_date_metadata_for_hidden_task(self):
+        for index in range(5):
+            Task.objects.create(
+                title=f"Task filler {index}",
+                task_list=self.todo_a,
+            )
+        hidden_task = Task.objects.create(
+            title="Task hidden with due date",
+            task_list=self.todo_a,
+            priority=Task.PRIORITY_HIGH,
+            due_date=date(2026, 5, 18),
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, hidden_task.title)
+        self.assertContains(response, "Vence 18 may 2026")
+        self.assertNotContains(response, "Fecha límite: 18/05/2026")
 
     def test_board_detail_and_task_detail_show_task_tags(self):
         tag_a = Tag.objects.create(board=self.board_a, name="Backend")

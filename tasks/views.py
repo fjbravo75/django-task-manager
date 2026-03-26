@@ -8,6 +8,21 @@ from django.shortcuts import get_object_or_404, redirect, render
 from tasks.forms import BoardForm, RegisterForm, TagForm, TaskForm, TaskListForm, TaskMoveForm
 from tasks.models import Board, Tag, Task, TaskList
 
+SPANISH_MONTH_ABBREVIATIONS = {
+    1: "ene",
+    2: "feb",
+    3: "mar",
+    4: "abr",
+    5: "may",
+    6: "jun",
+    7: "jul",
+    8: "ago",
+    9: "sep",
+    10: "oct",
+    11: "nov",
+    12: "dic",
+}
+
 
 def register(request):
     if request.user.is_authenticated:
@@ -349,12 +364,19 @@ def _get_task_from_board(board, task_pk):
     raise Http404
 
 
+def _format_compact_due_date_label(due_date):
+    if due_date is None:
+        return None
+    return f"Vence {due_date.day} {SPANISH_MONTH_ABBREVIATIONS[due_date.month]} {due_date.year}"
+
+
 def _build_board_detail_context(board, *, bound_move_form=None):
     all_tags = list(board.tags.all())
     board_task_lists = []
     for task_list in board.task_lists.all():
         all_tasks = list(task_list.tasks.all())
         for task in all_tasks:
+            task.compact_due_date_label = _format_compact_due_date_label(task.due_date)
             if bound_move_form is not None and bound_move_form.task.pk == task.pk:
                 task.move_form = bound_move_form
             else:
