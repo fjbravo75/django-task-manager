@@ -356,6 +356,127 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(Tag.objects.filter(board=self.board_a, name="Backend").count(), 1)
         self.assertIn("name", response.context["form"].errors)
 
+    def test_board_tag_update_requires_authentication(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+
+        response = self.client.get(
+            reverse("board_tag_update", args=[self.board_a.pk, tag.pk]),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_tag_update", args=[self.board_a.pk, tag.pk]), response.url)
+
+    def test_board_tag_update_rejects_foreign_tag(self):
+        foreign_tag = Tag.objects.create(board=self.board_b, name="Urgente")
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("board_tag_update", args=[self.board_b.pk, foreign_tag.pk]),
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_tag_update_form_only_exposes_name(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("board_tag_update", args=[self.board_a.pk, tag.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["form"].fields.keys()), ["name"])
+        self.assertContains(response, self.board_a.name)
+        self.assertContains(response, "Renombrar etiqueta")
+
+    def test_board_tag_update_keeps_board_in_server_and_redirects(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_tag_update", args=[self.board_a.pk, tag.pk]),
+            {
+                "name": "API",
+                "board": self.board_b.pk,
+            },
+        )
+
+        tag.refresh_from_db()
+
+        self.assertEqual(tag.name, "API")
+        self.assertEqual(tag.board, self.board_a)
+        self.assertNotEqual(tag.board, self.board_b)
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+
+    def test_board_tag_update_rejects_duplicate_name_within_same_board(self):
+        Tag.objects.create(board=self.board_a, name="Backend")
+        tag = Tag.objects.create(board=self.board_a, name="API")
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_tag_update", args=[self.board_a.pk, tag.pk]),
+            {
+                "name": "Backend",
+            },
+        )
+
+        tag.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(tag.name, "API")
+        self.assertIn("name", response.context["form"].errors)
+
+    def test_board_tag_delete_requires_authentication(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+
+        response = self.client.get(
+            reverse("board_tag_delete", args=[self.board_a.pk, tag.pk]),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_tag_delete", args=[self.board_a.pk, tag.pk]), response.url)
+
+    def test_board_tag_delete_rejects_foreign_tag(self):
+        foreign_tag = Tag.objects.create(board=self.board_b, name="Urgente")
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_tag_delete", args=[self.board_b.pk, foreign_tag.pk]),
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Tag.objects.filter(pk=foreign_tag.pk).exists())
+
+    def test_board_tag_delete_renders_confirmation(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("board_tag_delete", args=[self.board_a.pk, tag.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Eliminar etiqueta")
+        self.assertContains(response, "Confirmar borrado")
+        self.assertContains(response, tag.name)
+        self.assertContains(response, "Tareas asociadas")
+
+    def test_board_tag_delete_deletes_tag_but_keeps_tasks_and_clears_relations(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+        self.task_a.tags.add(tag)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("board_tag_delete", args=[self.board_a.pk, tag.pk]),
+        )
+
+        self.task_a.refresh_from_db()
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertFalse(Tag.objects.filter(pk=tag.pk).exists())
+        self.assertTrue(Task.objects.filter(pk=self.task_a.pk).exists())
+        self.assertFalse(self.task_a.tags.exists())
+
     def test_board_task_list_update_requires_authentication(self):
         response = self.client.get(
             reverse("board_task_list_update", args=[self.board_a.pk, self.todo_a.pk]),
@@ -854,6 +975,41 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertContains(board_detail_response, "Etiquetas: Backend")
         self.assertContains(task_detail_response, "Backend")
+
+    def test_board_detail_shows_compact_tag_management_zone(self):
+        tag = Tag.objects.create(board=self.board_a, name="Backend")
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'board-panel-tags', html=False)
+        self.assertContains(response, 'id="board-tags-title"', html=False)
+        self.assertContains(response, "Etiquetas")
+        self.assertContains(response, reverse("board_tag_create", args=[self.board_a.pk]))
+        self.assertContains(response, reverse("board_tag_update", args=[self.board_a.pk, tag.pk]))
+        self.assertContains(response, reverse("board_tag_delete", args=[self.board_a.pk, tag.pk]))
+        self.assertContains(response, tag.name)
+
+    def test_board_detail_shows_ver_mas_for_more_than_three_tags(self):
+        for name in ["Backend", "API", "Urgente", "Bug"]:
+            Tag.objects.create(board=self.board_a, name=name)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ver más")
+
+    def test_board_detail_hides_ver_mas_for_three_tags_or_fewer(self):
+        for name in ["Backend", "API", "Urgente"]:
+            Tag.objects.create(board=self.board_a, name=name)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Ver más")
 
     def test_board_task_move_moves_task_to_another_list_and_redirects_to_detail(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)

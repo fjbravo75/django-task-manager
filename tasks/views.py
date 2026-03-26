@@ -6,7 +6,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from tasks.forms import BoardForm, RegisterForm, TagForm, TaskForm, TaskListForm, TaskMoveForm
-from tasks.models import Board, Task, TaskList
+from tasks.models import Board, Tag, Task, TaskList
 
 
 def register(request):
@@ -186,6 +186,55 @@ def board_tag_create(request, board_pk):
 
 
 @login_required
+def board_tag_update(request, board_pk, pk):
+    tag = _get_owned_tag(request.user, board_pk, pk)
+    board = tag.board
+
+    if request.method == "POST":
+        form = TagForm(request.POST, instance=tag, board=board)
+        if form.is_valid():
+            form.save()
+            return redirect("board_detail", pk=board.pk)
+    else:
+        form = TagForm(instance=tag, board=board)
+
+    context = {
+        "form": form,
+        "board": board,
+        "tag": tag,
+        "page_title": f"Renombrar {tag.name}",
+        "screen_title": "Renombrar etiqueta",
+        "screen_subtitle": "Actualiza el nombre de esta etiqueta dentro del tablero actual.",
+        "panel_title": "Nombre de la etiqueta",
+        "panel_subtitle": "Solo puedes cambiar el nombre; la etiqueta sigue ligada a este tablero.",
+        "submit_label": "Guardar cambios",
+    }
+    return render(request, "tasks/task_list_form.html", context)
+
+
+@login_required
+def board_tag_delete(request, board_pk, pk):
+    tag = _get_owned_tag(request.user, board_pk, pk)
+    board = tag.board
+
+    if request.method == "POST":
+        tag.delete()
+        return redirect("board_detail", pk=board.pk)
+
+    context = {
+        "board": board,
+        "tag": tag,
+        "task_count": tag.tasks.count(),
+        "page_title": f"Eliminar {tag.name}",
+        "screen_title": "Eliminar etiqueta",
+        "screen_subtitle": "Confirma si quieres borrar esta etiqueta de forma definitiva.",
+        "panel_title": "Confirmación de borrado",
+        "panel_subtitle": "Las tareas seguirán existiendo, pero perderán esta etiqueta.",
+    }
+    return render(request, "tasks/tag_confirm_delete.html", context)
+
+
+@login_required
 def board_task_list_update(request, board_pk, pk):
     task_list = _get_owned_task_list(request.user, board_pk, pk)
     board = task_list.board
@@ -250,6 +299,10 @@ def _get_owned_board_with_tasks(user, board_pk):
         .select_related("owner")
         .prefetch_related(
             Prefetch(
+                "tags",
+                queryset=Tag.objects.order_by("name", "pk"),
+            ),
+            Prefetch(
                 "task_lists",
                 queryset=TaskList.objects.prefetch_related(
                     Prefetch(
@@ -271,6 +324,14 @@ def _get_owned_task_list(user, board_pk, task_list_pk):
     )
 
 
+def _get_owned_tag(user, board_pk, tag_pk):
+    return get_object_or_404(
+        Tag.objects.filter(board__owner=user).select_related("board", "board__owner"),
+        board_id=board_pk,
+        pk=tag_pk,
+    )
+
+
 def _build_task_move_form(board, task, data=None):
     return TaskMoveForm(
         data=data,
@@ -289,6 +350,7 @@ def _get_task_from_board(board, task_pk):
 
 
 def _build_board_detail_context(board, *, bound_move_form=None):
+    all_tags = list(board.tags.all())
     board_task_lists = []
     for task_list in board.task_lists.all():
         all_tasks = list(task_list.tasks.all())
@@ -313,6 +375,9 @@ def _build_board_detail_context(board, *, bound_move_form=None):
 
     return {
         "board": board,
+        "board_visible_tags": all_tags[:3],
+        "board_hidden_tags": all_tags[3:],
+        "board_has_hidden_tags": len(all_tags) > 3,
         "board_task_lists": board_task_lists,
     }
 
