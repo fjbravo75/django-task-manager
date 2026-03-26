@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
+from tasks.forms import LoginForm
 from tasks.views import register
 
 urlpatterns = [
@@ -24,6 +25,7 @@ urlpatterns = [
     path(
         "accounts/login/",
         auth_views.LoginView.as_view(
+            authentication_form=LoginForm,
             template_name="registration/login.html",
             redirect_authenticated_user=True,
         ),
