@@ -353,6 +353,196 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Task A")
         self.assertNotContains(response, "Task B")
 
+    def test_task_list_filter_form_shows_only_owned_boards_lists_and_priorities(self):
+        own_board = Board.objects.create(name="Board C", owner=self.user_a)
+        own_list = TaskList.objects.create(board=own_board, name="Doing", position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_list"))
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["filter_form"]
+        self.assertEqual(
+            list(form.fields["board"].queryset.values_list("pk", flat=True)),
+            [self.board_a.pk, own_board.pk],
+        )
+        self.assertEqual(
+            list(form.fields["task_list"].queryset.values_list("pk", flat=True)),
+            [self.todo_a.pk, own_list.pk],
+        )
+        self.assertEqual(list(form.fields["priority"].choices), [("", "Todas"), *Task.PRIORITY_CHOICES])
+
+    def test_task_list_filter_form_limits_task_lists_to_selected_board(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        TaskList.objects.create(board=other_board, name="Review", position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_list"), {"board": self.board_a.pk})
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["filter_form"]
+        self.assertEqual(
+            list(form.fields["task_list"].queryset.values_list("pk", flat=True)),
+            [self.todo_a.pk, doing.pk],
+        )
+
+    def test_task_list_can_filter_by_board(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_list = TaskList.objects.create(board=other_board, name="Doing", position=1)
+        Task.objects.create(title="Task C", task_list=other_list)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_list"), {"board": self.board_a.pk})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Task A")
+        self.assertNotContains(response, "Task C")
+        self.assertNotContains(response, "Task B")
+
+    def test_task_list_can_filter_by_task_list_within_selected_board(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        Task.objects.create(title="Task Doing", task_list=doing)
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_list = TaskList.objects.create(board=other_board, name="Review", position=1)
+        Task.objects.create(title="Task Review", task_list=other_list)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("task_list"),
+            {"board": self.board_a.pk, "task_list": doing.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Task Doing")
+        self.assertNotContains(response, "Task A")
+        self.assertNotContains(response, "Task Review")
+        self.assertNotContains(response, "Task B")
+
+    def test_task_list_can_filter_by_priority(self):
+        self.task_a.priority = Task.PRIORITY_HIGH
+        self.task_a.save(update_fields=["priority"])
+        own_medium_task = Task.objects.create(
+            title="Task Medium",
+            task_list=self.todo_a,
+            priority=Task.PRIORITY_MEDIUM,
+        )
+        self.task_b.priority = Task.PRIORITY_HIGH
+        self.task_b.save(update_fields=["priority"])
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_list"), {"priority": Task.PRIORITY_HIGH})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.task_a.title)
+        self.assertNotContains(response, own_medium_task.title)
+        self.assertNotContains(response, self.task_b.title)
+
+    def test_task_list_can_filter_by_board_task_list_and_priority_together(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        target_task = Task.objects.create(
+            title="Task Critical Todo",
+            task_list=self.todo_a,
+            priority=Task.PRIORITY_HIGH,
+        )
+        Task.objects.create(
+            title="Task Medium Todo",
+            task_list=self.todo_a,
+            priority=Task.PRIORITY_MEDIUM,
+        )
+        Task.objects.create(
+            title="Task Critical Doing",
+            task_list=doing,
+            priority=Task.PRIORITY_HIGH,
+        )
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_list = TaskList.objects.create(board=other_board, name="Review", position=1)
+        Task.objects.create(
+            title="Task Critical Review",
+            task_list=other_list,
+            priority=Task.PRIORITY_HIGH,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("task_list"),
+            {
+                "board": self.board_a.pk,
+                "task_list": self.todo_a.pk,
+                "priority": Task.PRIORITY_HIGH,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, target_task.title)
+        self.assertNotContains(response, "Task Medium Todo")
+        self.assertNotContains(response, "Task Critical Doing")
+        self.assertNotContains(response, "Task Critical Review")
+        self.assertNotContains(response, "Task B")
+
+    def test_task_list_pagination_preserves_active_filter_querystring(self):
+        self.task_a.priority = Task.PRIORITY_HIGH
+        self.task_a.save(update_fields=["priority"])
+        for index in range(5):
+            Task.objects.create(
+                title=f"Task High {index}",
+                task_list=self.todo_a,
+                priority=Task.PRIORITY_HIGH,
+            )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("task_list"),
+            {"board": self.board_a.pk, "priority": Task.PRIORITY_HIGH},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="?board={self.board_a.pk}&amp;priority={Task.PRIORITY_HIGH}&amp;page=2"',
+            html=False,
+        )
+
+    def test_task_list_ignores_invalid_or_foreign_filter_params_safely(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_list = TaskList.objects.create(board=other_board, name="Review", position=1)
+        Task.objects.create(title="Task Review", task_list=other_list)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("task_list"),
+            {
+                "board": self.board_b.pk,
+                "task_list": self.todo_b.pk,
+                "priority": "urgent",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Task A")
+        self.assertContains(response, "Task Review")
+        self.assertNotContains(response, "Task B")
+        self.assertFalse(response.context["filter_form"].errors)
+
+    def test_task_list_ignores_task_list_outside_selected_board(self):
+        other_board = Board.objects.create(name="Board C", owner=self.user_a)
+        other_list = TaskList.objects.create(board=other_board, name="Review", position=1)
+        Task.objects.create(title="Task Review", task_list=other_list)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("task_list"),
+            {
+                "board": self.board_a.pk,
+                "task_list": other_list.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Task A")
+        self.assertNotContains(response, "Task Review")
+        self.assertNotContains(response, "Task B")
+
     def test_user_cannot_access_foreign_task_urls(self):
         self.client.force_login(self.user_a)
 

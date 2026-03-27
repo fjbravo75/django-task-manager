@@ -6,6 +6,28 @@ from django.utils.translation import override
 from tasks.models import Board, Tag, Task, TaskList
 
 
+class SafeModelChoiceField(forms.ModelChoiceField):
+    def clean(self, value):
+        if value in self.empty_values:
+            return None
+
+        try:
+            return super().clean(value)
+        except forms.ValidationError:
+            return None
+
+
+class SafeChoiceField(forms.ChoiceField):
+    def clean(self, value):
+        if value in self.empty_values:
+            return None
+
+        try:
+            return super().clean(value)
+        except forms.ValidationError:
+            return None
+
+
 class LoginForm(AuthenticationForm):
     error_messages = {
         "invalid_login": "No hemos podido iniciar sesión con esos datos. Revisa tu usuario y tu contraseña e inténtalo de nuevo.",
@@ -146,6 +168,74 @@ class TagForm(forms.ModelForm):
             raise forms.ValidationError("Ya existe una etiqueta con ese nombre en este tablero.")
 
         return name
+
+
+class TaskFilterForm(forms.Form):
+    board = SafeModelChoiceField(
+        queryset=Board.objects.none(),
+        required=False,
+        label="Tablero",
+        empty_label="Todos",
+    )
+    task_list = SafeModelChoiceField(
+        queryset=TaskList.objects.none(),
+        required=False,
+        label="Lista",
+        empty_label="Todas",
+    )
+    priority = SafeChoiceField(
+        required=False,
+        label="Prioridad",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+        board_queryset = Board.objects.none()
+        task_list_queryset = TaskList.objects.none()
+
+        if user is not None and user.is_authenticated:
+            board_queryset = Board.objects.filter(owner=user).order_by("name", "pk")
+            task_list_queryset = (
+                TaskList.objects.filter(board__owner=user)
+                .select_related("board")
+                .order_by("board__name", "position", "name", "pk")
+            )
+
+        selected_board = self._get_selected_board(board_queryset)
+        if selected_board is not None:
+            task_list_queryset = task_list_queryset.filter(board=selected_board)
+
+        self.fields["board"].queryset = board_queryset
+        self.fields["board"].empty_label = "Todos"
+        self.fields["task_list"].queryset = task_list_queryset
+        self.fields["task_list"].empty_label = "Todas"
+        self.fields["task_list"].label_from_instance = self._build_task_list_option_label(
+            include_board_name=selected_board is None,
+        )
+        self.fields["priority"].choices = [("", "Todas"), *Task.PRIORITY_CHOICES]
+
+    def _get_selected_board(self, board_queryset):
+        board_value = None
+        if self.is_bound:
+            board_value = self.data.get(self.add_prefix("board"))
+        else:
+            board_value = self.initial.get("board")
+
+        if board_value in (None, ""):
+            return None
+
+        try:
+            return board_queryset.get(pk=board_value)
+        except (TypeError, ValueError, Board.DoesNotExist):
+            return None
+
+    def _build_task_list_option_label(self, *, include_board_name):
+        if include_board_name:
+            return lambda task_list: f"{task_list.board.name} - {task_list.name}"
+        return lambda task_list: task_list.name
 
 
 class TaskForm(forms.ModelForm):

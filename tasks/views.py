@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login
 from django.core.paginator import Paginator
@@ -5,7 +7,7 @@ from django.db.models import Max, Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import BoardForm, RegisterForm, TagForm, TaskForm, TaskListForm, TaskMoveForm
+from tasks.forms import BoardForm, RegisterForm, TagForm, TaskFilterForm, TaskForm, TaskListForm, TaskMoveForm
 from tasks.models import Board, Tag, Task, TaskList
 
 SPANISH_MONTH_ABBREVIATIONS = {
@@ -406,16 +408,43 @@ def _build_board_detail_context(board, *, bound_move_form=None):
 
 @login_required
 def task_list(request):
-    task_list = (
+    tasks_queryset = (
         Task.objects.filter(task_list__board__owner=request.user)
         .select_related("task_list", "task_list__board", "assignee")
         .prefetch_related("tags")
         .order_by("task_list__board__name", "task_list__position", "pk")
     )
-    paginator = Paginator(task_list, 5)
-    page_number = request.GET.get('page')
+    filter_form = TaskFilterForm(request.GET, user=request.user)
+    filter_form.is_valid()
+
+    selected_board = filter_form.cleaned_data["board"]
+    selected_task_list = filter_form.cleaned_data["task_list"]
+    selected_priority = filter_form.cleaned_data["priority"]
+
+    if selected_board is not None:
+        tasks_queryset = tasks_queryset.filter(task_list__board=selected_board)
+    if selected_task_list is not None:
+        tasks_queryset = tasks_queryset.filter(task_list=selected_task_list)
+    if selected_priority:
+        tasks_queryset = tasks_queryset.filter(priority=selected_priority)
+
+    paginator = Paginator(tasks_queryset, 5)
+    page_number = request.GET.get("page")
     tasks = paginator.get_page(page_number)
-    return render(request, 'tasks/task_list.html', {'tasks': tasks})
+    pagination_querystring = _build_task_filter_querystring(
+        selected_board=selected_board,
+        selected_task_list=selected_task_list,
+        selected_priority=selected_priority,
+    )
+    if pagination_querystring:
+        pagination_querystring = f"{pagination_querystring}&"
+
+    context = {
+        "tasks": tasks,
+        "filter_form": filter_form,
+        "pagination_querystring": pagination_querystring,
+    }
+    return render(request, "tasks/task_list.html", context)
 
 
 @login_required
@@ -573,3 +602,14 @@ def _get_requested_task_list_for_user(user, requested_task_list_pk):
         .filter(pk=requested_task_list_pk)
         .first()
     )
+
+
+def _build_task_filter_querystring(*, selected_board, selected_task_list, selected_priority):
+    query_params = []
+    if selected_board is not None:
+        query_params.append(("board", selected_board.pk))
+    if selected_task_list is not None:
+        query_params.append(("task_list", selected_task_list.pk))
+    if selected_priority:
+        query_params.append(("priority", selected_priority))
+    return urlencode(query_params)
