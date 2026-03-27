@@ -10,22 +10,157 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from urllib.parse import parse_qsl, unquote, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_env_file(env_path):
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if value and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+
+        os.environ.setdefault(key, value)
+
+
+def _get_bool_env(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _get_list_env(name, default=None):
+    if default is None:
+        default = []
+
+    value = os.environ.get(name)
+    if value is None:
+        return default
+
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _normalize_db_engine(value):
+    aliases = {
+        "sqlite": "django.db.backends.sqlite3",
+        "sqlite3": "django.db.backends.sqlite3",
+        "django.db.backends.sqlite3": "django.db.backends.sqlite3",
+        "postgres": "django.db.backends.postgresql",
+        "postgresql": "django.db.backends.postgresql",
+        "psql": "django.db.backends.postgresql",
+        "django.db.backends.postgresql": "django.db.backends.postgresql",
+    }
+    return aliases.get(value, value)
+
+
+def _resolve_sqlite_name(raw_name):
+    if not raw_name:
+        return BASE_DIR / "db.sqlite3"
+
+    if raw_name == ":memory:":
+        return raw_name
+
+    sqlite_path = Path(raw_name)
+    if sqlite_path.is_absolute():
+        return sqlite_path
+
+    return BASE_DIR / sqlite_path
+
+
+def _database_config_from_url(database_url):
+    parsed_url = urlparse(database_url)
+    engine = _normalize_db_engine(parsed_url.scheme)
+
+    if engine == "django.db.backends.sqlite3":
+        sqlite_name = unquote(f"{parsed_url.netloc}{parsed_url.path}")
+        if sqlite_name.startswith("//"):
+            sqlite_name = sqlite_name[1:]
+        else:
+            sqlite_name = sqlite_name.lstrip("/")
+        return {
+            "ENGINE": engine,
+            "NAME": _resolve_sqlite_name(sqlite_name),
+        }
+
+    if engine != "django.db.backends.postgresql":
+        raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed_url.scheme}")
+
+    database_config = {
+        "ENGINE": engine,
+        "NAME": unquote(parsed_url.path.lstrip("/")),
+        "USER": unquote(parsed_url.username or ""),
+        "PASSWORD": unquote(parsed_url.password or ""),
+        "HOST": parsed_url.hostname or "",
+        "PORT": str(parsed_url.port or ""),
+    }
+
+    options = dict(parse_qsl(parsed_url.query, keep_blank_values=False))
+    if options:
+        database_config["OPTIONS"] = options
+
+    return database_config
+
+
+def _build_database_config():
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if database_url:
+        return _database_config_from_url(database_url)
+
+    explicit_engine = os.environ.get("DB_ENGINE", "").strip()
+    if explicit_engine:
+        engine = _normalize_db_engine(explicit_engine)
+        if engine == "django.db.backends.sqlite3":
+            return {
+                "ENGINE": engine,
+                "NAME": _resolve_sqlite_name(os.environ.get("DB_NAME", "db.sqlite3")),
+            }
+
+        return {
+            "ENGINE": engine,
+            "NAME": os.environ.get("DB_NAME", ""),
+            "USER": os.environ.get("DB_USER", ""),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", ""),
+            "PORT": os.environ.get("DB_PORT", ""),
+        }
+
+    return {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+
+
+_load_env_file(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0=cp6*cwgyvmd@lc6*+6#2*%xay#**)@%y(2w(v%4@jr3*m^!n'
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-0=cp6*cwgyvmd@lc6*+6#2*%xay#**)@%y(2w(v%4@jr3*m^!n",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _get_bool_env("DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = _get_list_env("ALLOWED_HOSTS", default=[])
 
 
 # Application definition
@@ -74,10 +209,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": _build_database_config()
 }
 
 
@@ -122,3 +254,7 @@ STATIC_URL = '/static/'
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "board_list"
 LOGOUT_REDIRECT_URL = "login"
+
+
+# Demo user credentials
+DEMO_USER_PASSWORD = os.environ.get("DEMO_USER_PASSWORD", "DemoAccess123!")

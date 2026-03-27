@@ -2,10 +2,14 @@ import csv
 from datetime import date
 from io import StringIO
 
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
 
+from tasks.demo_data import DEMO_USERNAME, get_demo_totals
 from tasks.models import Board, Tag, Task, TaskList
 
 
@@ -1671,3 +1675,89 @@ class BoardTaskAuthorizationTests(TestCase):
             any("Select a valid choice." in error for error in form.errors["task_list"]),
         )
         self.assertFalse(Task.objects.filter(title="Intrusion attempt").exists())
+
+
+class SeedDemoCommandTests(TestCase):
+    def run_seed_demo(self):
+        stdout = StringIO()
+        call_command("seed_demo", stdout=stdout)
+        return stdout.getvalue()
+
+    def test_seed_demo_creates_reproducible_workspace_from_empty_database(self):
+        command_output = self.run_seed_demo()
+
+        demo_user = User.objects.get(username=DEMO_USERNAME)
+        totals = get_demo_totals()
+
+        self.assertEqual(Board.objects.filter(owner=demo_user).count(), totals["boards"])
+        self.assertEqual(TaskList.objects.filter(board__owner=demo_user).count(), totals["task_lists"])
+        self.assertEqual(Task.objects.filter(task_list__board__owner=demo_user).count(), totals["tasks"])
+        self.assertTrue(self.client.login(username=DEMO_USERNAME, password=settings.DEMO_USER_PASSWORD))
+        self.assertIn("Espacio demo creado", command_output)
+
+    def test_seed_demo_is_idempotent_and_does_not_duplicate_demo_objects(self):
+        self.run_seed_demo()
+        first_totals = {
+            "users": User.objects.count(),
+            "boards": Board.objects.count(),
+            "task_lists": TaskList.objects.count(),
+            "tasks": Task.objects.count(),
+            "tags": Tag.objects.count(),
+        }
+
+        self.run_seed_demo()
+        second_totals = {
+            "users": User.objects.count(),
+            "boards": Board.objects.count(),
+            "task_lists": TaskList.objects.count(),
+            "tasks": Task.objects.count(),
+            "tags": Tag.objects.count(),
+        }
+
+        self.assertEqual(first_totals, second_totals)
+        self.assertTrue(self.client.login(username=DEMO_USERNAME, password=settings.DEMO_USER_PASSWORD))
+
+    def test_seed_demo_does_not_modify_other_users_data(self):
+        owner = User.objects.create_user(username="alice", password="testpass123")
+        board = Board.objects.create(name="Board privada", description="No tocar", owner=owner)
+        task_list = TaskList.objects.create(board=board, name="Pendiente", position=1)
+        tag = Tag.objects.create(board=board, name="Cliente")
+        task = Task.objects.create(
+            title="Tarea privada",
+            description="Sigue igual",
+            task_list=task_list,
+            assignee=owner,
+            priority=Task.PRIORITY_HIGH,
+            due_date=date(2026, 4, 2),
+        )
+        task.tags.add(tag)
+
+        self.run_seed_demo()
+
+        owner.refresh_from_db()
+        board.refresh_from_db()
+        task_list.refresh_from_db()
+        tag.refresh_from_db()
+        task.refresh_from_db()
+
+        self.assertEqual(board.description, "No tocar")
+        self.assertEqual(task_list.position, 1)
+        self.assertEqual(task.description, "Sigue igual")
+        self.assertEqual(task.assignee, owner)
+        self.assertEqual(task.priority, Task.PRIORITY_HIGH)
+        self.assertEqual(task.due_date, date(2026, 4, 2))
+        self.assertEqual(list(task.tags.all()), [tag])
+
+    def test_seed_demo_aborts_if_demo_username_belongs_to_someone_else(self):
+        User.objects.create_user(
+            username=DEMO_USERNAME,
+            password="testpass123",
+            email="demo-real@example.com",
+            first_name="Persona",
+            last_name="Real",
+        )
+
+        with self.assertRaisesMessage(CommandError, "Ya existe un usuario 'demo' ajeno al espacio demo"):
+            call_command("seed_demo")
+
+        self.assertEqual(Board.objects.count(), 0)
