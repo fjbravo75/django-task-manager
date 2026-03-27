@@ -1,4 +1,6 @@
+import csv
 from datetime import date
+from io import StringIO
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -952,6 +954,18 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Editar tablero")
         self.assertContains(response, "Borrar tablero")
 
+    def test_board_detail_shows_action_group_labels_and_export_csv_button(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tablero")
+        self.assertContains(response, "Listas")
+        self.assertContains(response, "Tareas")
+        self.assertContains(response, reverse("board_export_csv", args=[self.board_a.pk]))
+        self.assertContains(response, "Exportar CSV")
+
     def test_board_detail_shows_task_create_cta_for_each_task_list(self):
         empty_task_list = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
         self.client.force_login(self.user_a)
@@ -1469,6 +1483,93 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Ver más")
+
+    def test_board_export_csv_requires_authentication(self):
+        response = self.client.get(reverse("board_export_csv", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_export_csv", args=[self.board_a.pk]), response.url)
+
+    def test_board_export_csv_rejects_foreign_board(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_export_csv", args=[self.board_b.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_export_csv_returns_exact_header_and_task_rows_for_owned_board(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        backend = Tag.objects.create(board=self.board_a, name="Backend")
+        api = Tag.objects.create(board=self.board_a, name="API")
+        self.task_a.description = "Preparar backlog"
+        self.task_a.priority = Task.PRIORITY_HIGH
+        self.task_a.due_date = date(2026, 4, 15)
+        self.task_a.assignee = self.user_a
+        self.task_a.save(update_fields=["description", "priority", "due_date", "assignee"])
+        self.task_a.tags.set([backend, api])
+        later_task = Task.objects.create(
+            title="Task B2",
+            description="",
+            task_list=doing,
+            priority=Task.PRIORITY_LOW,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_export_csv", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertEqual(
+            response["Content-Disposition"],
+            f'attachment; filename="board-{self.board_a.pk}-tasks.csv"',
+        )
+
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8"))))
+
+        self.assertEqual(
+            rows[0],
+            ["tablero", "lista", "titulo", "descripcion", "prioridad", "fecha_limite", "asignada_a", "etiquetas"],
+        )
+        self.assertEqual(
+            rows[1],
+            [
+                self.board_a.name,
+                self.todo_a.name,
+                self.task_a.title,
+                "Preparar backlog",
+                "Alta",
+                "2026-04-15",
+                self.user_a.username,
+                "API, Backend",
+            ],
+        )
+        self.assertEqual(
+            rows[2],
+            [
+                self.board_a.name,
+                doing.name,
+                later_task.title,
+                "",
+                "Baja",
+                "",
+                "",
+                "",
+            ],
+        )
+        self.assertEqual(len(rows), 3)
+
+    def test_board_export_csv_for_empty_board_returns_header_only(self):
+        empty_board = Board.objects.create(name="Board Empty", owner=self.user_a)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_export_csv", args=[empty_board.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8"))))
+        self.assertEqual(
+            rows,
+            [["tablero", "lista", "titulo", "descripcion", "prioridad", "fecha_limite", "asignada_a", "etiquetas"]],
+        )
 
     def test_board_task_move_moves_task_to_another_list_and_redirects_to_detail(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)

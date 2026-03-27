@@ -32,41 +32,63 @@
                 </p>
             </div>
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <a
-                    class="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    href="{% url 'board_task_create' board.pk %}"
-                >
-                    Nueva tarea
-                </a>
+            <div class="board-actions" aria-label="Acciones del tablero">
+                <section class="board-actions__group" aria-labelledby="board-actions-group-board">
+                    <p class="board-actions__label" id="board-actions-group-board">Tablero</p>
+                    <div class="board-actions__buttons">
+                        <a
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            href="{% url 'board_update' board.pk %}"
+                        >
+                            Editar tablero
+                        </a>
 
-                <a
-                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                    href="{% url 'board_task_list_create' board.pk %}"
-                >
-                    Nueva lista
-                </a>
+                        <a
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            href="{% url 'board_delete' board.pk %}"
+                        >
+                            Borrar tablero
+                        </a>
+                    </div>
+                </section>
 
-                <a
-                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                    href="{% url 'board_update' board.pk %}"
-                >
-                    Editar tablero
-                </a>
+                <section class="board-actions__group" aria-labelledby="board-actions-group-lists">
+                    <p class="board-actions__label" id="board-actions-group-lists">Listas</p>
+                    <div class="board-actions__buttons">
+                        <a
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            href="{% url 'board_task_list_create' board.pk %}"
+                        >
+                            Nueva lista
+                        </a>
+                    </div>
+                </section>
 
-                <a
-                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                    href="{% url 'board_delete' board.pk %}"
-                >
-                    Borrar tablero
-                </a>
+                <section class="board-actions__group board-actions__group--tasks" aria-labelledby="board-actions-group-tasks">
+                    <p class="board-actions__label" id="board-actions-group-tasks">Tareas</p>
+                    <div class="board-actions__buttons board-actions__buttons--tasks">
+                        <a
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            href="{% url 'task_list' %}"
+                        >
+                            Ver todas las tareas
+                        </a>
 
-                <a
-                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                    href="{% url 'task_list' %}"
-                >
-                    Ver todas las tareas
-                </a>
+                        <a
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                            href="{% url 'board_export_csv' board.pk %}"
+                        >
+                            Exportar CSV
+                        </a>
+
+                        <a
+                            class="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                            href="{% url 'board_task_create' board.pk %}"
+                        >
+                            Nueva tarea
+                        </a>
+                    </div>
+                </section>
             </div>
         </header>
 

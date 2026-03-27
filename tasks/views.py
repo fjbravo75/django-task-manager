@@ -1,10 +1,11 @@
+import csv
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login
 from django.core.paginator import Paginator
 from django.db.models import Max, Prefetch
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from tasks.forms import BoardForm, RegisterForm, TagForm, TaskFilterForm, TaskForm, TaskListForm, TaskMoveForm
@@ -308,6 +309,53 @@ def board_detail(request, pk):
         "tasks/board_detail.html",
         _build_board_detail_context(board),
     )
+
+
+@login_required
+def board_export_csv(request, pk):
+    board = get_object_or_404(
+        Board.objects.filter(owner=request.user).only("pk", "name"),
+        pk=pk,
+    )
+    tasks_queryset = (
+        Task.objects.filter(task_list__board=board)
+        .select_related("task_list", "assignee")
+        .prefetch_related("tags")
+        .order_by("task_list__position", "pk")
+    )
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="board-{board.pk}-tasks.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "tablero",
+            "lista",
+            "titulo",
+            "descripcion",
+            "prioridad",
+            "fecha_limite",
+            "asignada_a",
+            "etiquetas",
+        ]
+    )
+
+    for task in tasks_queryset:
+        writer.writerow(
+            [
+                board.name,
+                task.task_list.name,
+                task.title,
+                task.description or "",
+                task.get_priority_display(),
+                task.due_date.isoformat() if task.due_date else "",
+                task.assignee.username if task.assignee else "",
+                ", ".join(task.tags.order_by("name", "pk").values_list("name", flat=True)),
+            ]
+        )
+
+    return response
 
 
 def _get_owned_board_with_tasks(user, board_pk):
