@@ -3,10 +3,10 @@
 {% block title %}Crear cuenta{% endblock %}
 
 {% block content %}
-    <section class="page-section auth-page pt-2">
+    <section class="page-section auth-page content-frame pt-2">
         <div class="auth-shell">
             <section class="auth-copy" aria-labelledby="register-copy-title">
-                <p class="auth-copy__welcome">Bienvenido a Gestor de tareas</p>
+                <p class="auth-copy__eyebrow">Crea tu cuenta</p>
 
                 <div class="auth-copy__body">
                     <h1 class="auth-copy__title" id="register-copy-title">Crea tu espacio de trabajo</h1>
@@ -22,8 +22,14 @@
                 <p class="auth-copy__closing">Crea tu cuenta y empieza a organizarte.</p>
             </section>
 
-            <section class="auth-card" aria-label="Formulario de registro">
-                <form method="post" class="auth-form" novalidate>
+            <section class="auth-card auth-card--register" aria-label="Formulario de registro">
+                <header class="auth-card__header">
+                    <p class="auth-card__eyebrow">Nuevo acceso</p>
+                    <h2 class="auth-card__title">Crear cuenta</h2>
+                    <p class="auth-card__text">Completa tus datos y crea tu acceso para empezar a organizar tu trabajo con tu propia cuenta.</p>
+                </header>
+
+                <form method="post" class="auth-form auth-form--register" novalidate>
                     {% csrf_token %}
 
                     {% if form.non_field_errors %}
@@ -40,9 +46,7 @@
                                 {{ form.username.errors }}
                             </div>
                         {% endif %}
-                        {% if form.username.help_text %}
-                            <div class="auth-form-help">{{ form.username.help_text|safe }}</div>
-                        {% endif %}
+                        <div class="auth-form-help">Usa letras, números y los símbolos habituales para identificar tu cuenta.</div>
                     </div>
 
                     <div class="auth-form__group">
@@ -53,9 +57,7 @@
                                 {{ form.password1.errors }}
                             </div>
                         {% endif %}
-                        {% if form.password1.help_text %}
-                            <div class="auth-form-help auth-password-help">{{ form.password1.help_text|safe }}</div>
-                        {% endif %}
+                        <div class="auth-form-help auth-password-help">Usa una clave segura, con al menos 8 caracteres, y evita opciones demasiado comunes o fáciles de adivinar.</div>
                     </div>
 
                     <div class="auth-form__group">
@@ -66,15 +68,18 @@
                                 {{ form.password2.errors }}
                             </div>
                         {% endif %}
-                        {% if form.password2.help_text %}
-                            <div class="auth-form-help">{{ form.password2.help_text|safe }}</div>
-                        {% endif %}
+                        <div class="auth-form-help">Repite la misma contraseña para confirmar el acceso.</div>
                     </div>
 
                     <button class="auth-form__submit" type="submit">
                         Crear cuenta
                     </button>
                 </form>
+
+                <footer class="auth-card__footer">
+                    <p class="auth-card__meta">Si ya tienes cuenta, vuelve al acceso e inicia sesión.</p>
+                    <a class="auth-card__link" href="{% url 'login' %}">Volver al login</a>
+                </footer>
             </section>
         </div>
     </section>

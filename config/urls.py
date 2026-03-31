@@ -17,18 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from tasks.forms import LoginForm
-from tasks.views import register
+from tasks.views import TaskLoginView, register
 
 urlpatterns = [
     path("accounts/register/", register, name="register"),
     path(
         "accounts/login/",
-        auth_views.LoginView.as_view(
-            authentication_form=LoginForm,
-            template_name="registration/login.html",
-            redirect_authenticated_user=True,
-        ),
+        TaskLoginView.as_view(),
         name="login",
     ),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),

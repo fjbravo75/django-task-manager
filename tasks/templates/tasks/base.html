@@ -7,45 +7,51 @@
     <title>{% block title %}Gestor de tareas{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'tasks/styles.css' %}?v=20260325-1935">
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
-    <main class="mx-auto min-h-screen w-full max-w-7xl px-6 py-14 sm:px-8 lg:px-12">
-        <header class="mb-8 flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
-            <a
-                class="text-lg font-semibold tracking-tight text-slate-950 transition hover:text-slate-700"
-                href="{% url 'board_list' %}"
-            >
-                Gestor de tareas
-            </a>
-
-            <div class="flex flex-wrap items-center gap-3 text-sm">
+<body class="app-body">
+    <main class="app-shell">
+        <header class="app-header">
+            <div class="content-frame app-header__inner">
                 {% if user.is_authenticated %}
-                    <span class="text-slate-600">
-                        {{ user.username }}
-                    </span>
-
-                    <form method="post" action="{% url 'logout' %}" class="inline-flex">
-                        {% csrf_token %}
-                        <button
-                            class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
-                            type="submit"
-                        >
-                            Cerrar sesión
-                        </button>
-                    </form>
+                    <a
+                        class="text-lg font-semibold tracking-tight text-slate-950 transition hover:text-slate-700"
+                        href="{% url 'board_list' %}"
+                    >
+                        Gestor de tareas
+                    </a>
                 {% else %}
                     <a
-                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        class="text-lg font-semibold tracking-tight text-slate-950 transition hover:text-slate-700"
                         href="{% url 'login' %}"
                     >
-                        Iniciar sesión
+                        Gestor de tareas
                     </a>
+                {% endif %}
 
-                    <a
-                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                        href="{% url 'register' %}"
-                    >
-                        Crear cuenta
-                    </a>
+                {% if user.is_authenticated %}
+                    <div class="app-header__actions">
+                        <span class="app-header__session">
+                            Sesión iniciada como {{ user.username }}
+                        </span>
+
+                        <form method="post" action="{% url 'logout' %}" class="inline-flex">
+                            {% csrf_token %}
+                            <button
+                                class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+                                type="submit"
+                            >
+                                Cerrar sesión
+                            </button>
+                        </form>
+                    </div>
+                {% elif request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+                    <div class="app-header__actions">
+                        <a
+                            class="app-header__login-link"
+                            href="{% url 'login' %}"
+                        >
+                            Iniciar sesión
+                        </a>
+                    </div>
                 {% endif %}
             </div>
         </header>

@@ -3,10 +3,10 @@
 {% block title %}Iniciar sesión{% endblock %}
 
 {% block content %}
-    <section class="page-section auth-page pt-2">
+    <section class="page-section auth-page content-frame pt-2">
         <div class="auth-shell">
             <section class="auth-copy" aria-labelledby="login-copy-title">
-                <p class="auth-copy__welcome">Bienvenido a Gestor de tareas</p>
+                <p class="auth-copy__eyebrow">Accede a tu cuenta</p>
 
                 <div class="auth-copy__body">
                     <h1 class="auth-copy__title" id="login-copy-title">Organiza tu trabajo con claridad</h1>
@@ -22,8 +22,28 @@
                 <p class="auth-copy__closing">Entra y sigue por donde lo dejaste.</p>
             </section>
 
-            <section class="auth-card auth-card--compact" aria-label="Formulario de inicio de sesión">
-                <form method="post" class="auth-form auth-form--compact" novalidate>
+            <section class="auth-card auth-card--login" aria-label="Formulario de inicio de sesión">
+                <header class="auth-card__header">
+                    <p class="auth-card__eyebrow">Inicio de sesión</p>
+                    <h2 class="auth-card__title">Iniciar sesión</h2>
+                    <p class="auth-card__text">Entra con tu usuario y contraseña para continuar.</p>
+                </header>
+
+                {% if show_demo_access %}
+                    <section class="auth-demo" aria-label="Acceso de demostración">
+                        <p class="auth-demo__title">Acceso de demostración</p>
+                        <div class="auth-demo__row">
+                            <span class="auth-demo__label">Usuario demo</span>
+                            <code class="auth-demo__value">{{ demo_username }}</code>
+                        </div>
+                        <div class="auth-demo__row">
+                            <span class="auth-demo__label">Contraseña demo</span>
+                            <code class="auth-demo__value">{{ demo_password }}</code>
+                        </div>
+                    </section>
+                {% endif %}
+
+                <form method="post" class="auth-form auth-form--login" novalidate>
                     {% csrf_token %}
 
                     {% if form.non_field_errors %}
@@ -60,6 +80,11 @@
                         Entrar
                     </button>
                 </form>
+
+                <footer class="auth-card__footer">
+                    <p class="auth-card__meta">Si aún no tienes cuenta, puedes crearla y empezar a trabajar ahora mismo.</p>
+                    <a class="auth-card__link" href="{% url 'register' %}">Crear cuenta</a>
+                </footer>
             </section>
         </div>
     </section>

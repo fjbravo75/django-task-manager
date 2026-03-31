@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlparse
 
 from django.core.exceptions import ImproperlyConfigured
+from tasks.demo_data import DEFAULT_DEMO_PASSWORD
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -276,4 +277,4 @@ LOGOUT_REDIRECT_URL = "login"
 
 
 # Demo user credentials
-DEMO_USER_PASSWORD = os.environ.get("DEMO_USER_PASSWORD", "DemoAccess123!")
+DEMO_USER_PASSWORD = os.environ.get("DEMO_USER_PASSWORD", DEFAULT_DEMO_PASSWORD)

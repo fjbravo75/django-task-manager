@@ -6,10 +6,10 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from tasks.demo_data import DEMO_USERNAME, get_demo_totals
+from tasks.demo_data import DEFAULT_DEMO_PASSWORD, DEMO_USERNAME, get_demo_totals
 from tasks.models import Board, Tag, Task, TaskList
 
 
@@ -19,7 +19,7 @@ class AuthenticationFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "registration/login.html")
-        self.assertContains(response, "Bienvenido a Gestor de tareas")
+        self.assertContains(response, "Accede a tu cuenta")
         self.assertContains(response, "Organiza tu trabajo con claridad")
         self.assertContains(
             response,
@@ -29,6 +29,33 @@ class AuthenticationFlowTests(TestCase):
         self.assertContains(response, "Listas y tareas fáciles de revisar")
         self.assertContains(response, "Prioridades y fechas visibles de un vistazo")
         self.assertContains(response, "Entra y sigue por donde lo dejaste.")
+        self.assertContains(response, "Acceso de demostración")
+        self.assertContains(response, DEMO_USERNAME)
+        self.assertContains(response, settings.DEMO_USER_PASSWORD)
+        self.assertContains(
+            response,
+            "Si aún no tienes cuenta, puedes crearla y empezar a trabajar ahora mismo.",
+        )
+        self.assertContains(
+            response,
+            f'<a class="auth-card__link" href="{reverse("register")}">Crear cuenta</a>',
+            html=True,
+        )
+        self.assertContains(response, "Inicio de sesión")
+        self.assertNotContains(response, "app-header__login-link")
+        self.assertNotContains(response, "app-header__actions")
+        self.assertEqual(response.context["demo_username"], DEMO_USERNAME)
+        self.assertEqual(response.context["demo_password"], settings.DEMO_USER_PASSWORD)
+
+    @override_settings(DEMO_USER_PASSWORD="DemoAccessXYZ789!")
+    def test_login_shows_effective_demo_password_from_settings(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(settings.DEMO_USER_PASSWORD, DEFAULT_DEMO_PASSWORD)
+        self.assertContains(response, settings.DEMO_USER_PASSWORD)
+        self.assertNotContains(response, DEFAULT_DEMO_PASSWORD)
+        self.assertEqual(response.context["demo_password"], settings.DEMO_USER_PASSWORD)
 
     def test_login_shows_labels_in_spanish(self):
         response = self.client.get(reverse("login"))
@@ -69,7 +96,7 @@ class AuthenticationFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "registration/register.html")
-        self.assertContains(response, "Bienvenido a Gestor de tareas")
+        self.assertContains(response, "Crea tu cuenta")
         self.assertContains(response, "Crea tu espacio de trabajo")
         self.assertContains(
             response,
@@ -79,9 +106,21 @@ class AuthenticationFlowTests(TestCase):
         self.assertContains(response, "Seguimiento claro de tareas")
         self.assertContains(response, "Prioridades y fechas siempre visibles")
         self.assertContains(response, "Crea tu cuenta y empieza a organizarte.")
+        self.assertContains(response, "Nuevo acceso")
+        self.assertContains(
+            response,
+            "Si ya tienes cuenta, vuelve al acceso e inicia sesión.",
+        )
+        self.assertContains(
+            response,
+            f'<a class="auth-card__link" href="{reverse("login")}">Volver al login</a>',
+            html=True,
+        )
         self.assertContains(response, "Hasta 50 caracteres. Puedes usar letras, números y @/./+/-/_.")
         self.assertContains(response, "Tu contraseña debe contener al menos 8 caracteres.")
         self.assertContains(response, "Repite la misma contraseña para confirmar que la has escrito bien.")
+        self.assertNotContains(response, "app-header__login-link")
+        self.assertNotContains(response, "app-header__actions")
 
     def test_register_valid_post_creates_user_logs_them_in_and_redirects(self):
         response = self.client.post(
@@ -159,6 +198,17 @@ class AuthenticationFlowTests(TestCase):
 
         self.assertRedirects(response, reverse("login"))
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_authenticated_header_shows_session_text_and_logout(self):
+        user = User.objects.create_user(username="alice", password="testpass123")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("board_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sesión iniciada como alice")
+        self.assertContains(response, reverse("logout"))
+        self.assertContains(response, "Cerrar sesión")
 
 
 class BoardTaskAuthorizationTests(TestCase):
@@ -1715,6 +1765,14 @@ class SeedDemoCommandTests(TestCase):
         }
 
         self.assertEqual(first_totals, second_totals)
+        self.assertTrue(self.client.login(username=DEMO_USERNAME, password=settings.DEMO_USER_PASSWORD))
+
+    @override_settings(DEMO_USER_PASSWORD="DemoAccessXYZ789!")
+    def test_seed_demo_uses_effective_demo_password_from_settings(self):
+        self.run_seed_demo()
+
+        self.assertNotEqual(settings.DEMO_USER_PASSWORD, DEFAULT_DEMO_PASSWORD)
+        self.assertFalse(self.client.login(username=DEMO_USERNAME, password=DEFAULT_DEMO_PASSWORD))
         self.assertTrue(self.client.login(username=DEMO_USERNAME, password=settings.DEMO_USER_PASSWORD))
 
     def test_seed_demo_does_not_modify_other_users_data(self):

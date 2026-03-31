@@ -1,14 +1,17 @@
 import csv
 from urllib.parse import urlencode
 
-from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.contrib.auth import login as auth_login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.core.paginator import Paginator
 from django.db.models import Max, Prefetch
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from tasks.forms import BoardForm, RegisterForm, TagForm, TaskFilterForm, TaskForm, TaskListForm, TaskMoveForm
+from tasks.demo_data import DEMO_USERNAME
+from tasks.forms import BoardForm, LoginForm, RegisterForm, TagForm, TaskFilterForm, TaskForm, TaskListForm, TaskMoveForm
 from tasks.models import Board, Tag, Task, TaskList
 
 SPANISH_MONTH_ABBREVIATIONS = {
@@ -25,6 +28,23 @@ SPANISH_MONTH_ABBREVIATIONS = {
     11: "nov",
     12: "dic",
 }
+
+
+class TaskLoginView(LoginView):
+    form_class = LoginForm
+    template_name = "registration/login.html"
+    redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "show_demo_access": True,
+                "demo_username": DEMO_USERNAME,
+                "demo_password": settings.DEMO_USER_PASSWORD,
+            }
+        )
+        return context
 
 
 def register(request):
