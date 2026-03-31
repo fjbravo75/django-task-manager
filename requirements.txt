@@ -1,6 +1,8 @@
 asgiref==3.11.1
 Django==6.0.3
-packaging @ file:///home/task_176104874243446/conda-bld/packaging_1761049080023/work
+gunicorn==23.0.0
+packaging==25.0
+psycopg[binary]==3.2.12
 setuptools==80.10.2
 sqlparse==0.5.5
 wheel==0.46.3

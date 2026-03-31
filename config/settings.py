@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlparse
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -151,16 +153,32 @@ _load_env_file(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "django-insecure-0=cp6*cwgyvmd@lc6*+6#2*%xay#**)@%y(2w(v%4@jr3*m^!n",
+DEFAULT_SECRET_KEY = (
+    "django-insecure-0=cp6*cwgyvmd@lc6*+6#2*%xay#**)@%y(2w(v%4@jr3*m^!n"
 )
+INSECURE_SECRET_KEY_VALUES = {
+    "",
+    "change-me",
+    "django-insecure-change-me",
+    DEFAULT_SECRET_KEY,
+}
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _get_bool_env("DEBUG", default=True)
 
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get("SECRET_KEY", DEFAULT_SECRET_KEY).strip() or DEFAULT_SECRET_KEY
+
 ALLOWED_HOSTS = _get_list_env("ALLOWED_HOSTS", default=[])
+CSRF_TRUSTED_ORIGINS = _get_list_env("CSRF_TRUSTED_ORIGINS", default=[])
+
+if not DEBUG and SECRET_KEY in INSECURE_SECRET_KEY_VALUES:
+    raise ImproperlyConfigured("Set a real SECRET_KEY when DEBUG=False.")
+
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        "Set ALLOWED_HOSTS when DEBUG=False."
+    )
 
 
 # Application definition
@@ -248,6 +266,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # Authentication
