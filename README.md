@@ -12,6 +12,20 @@ Django Task Manager permite a cada usuario gestionar sus propios tableros, crear
 
 La aplicación está desplegada públicamente, puede probarse con acceso demo y también puede ejecutarse en local con una base de datos de ejemplo generada mediante comando.
 
+## Vista previa
+
+Estas son algunas vistas reales de la aplicación en su estado actual.
+
+<p align="center">
+  <img src="docs/images/login.png" alt="Pantalla de inicio de sesión de The Django Task Manager" width="48%">
+  <img src="docs/images/board-list.png" alt="Listado de tableros de The Django Task Manager" width="48%">
+</p>
+
+<p align="center">
+  <img src="docs/images/board-detail.png" alt="Vista de un tablero con listas y tareas en The Django Task Manager" width="48%">
+  <img src="docs/images/task-list.png" alt="Vista de todas las tareas con filtros en The Django Task Manager" width="48%">
+</p>
+
 ## Qué permite hacer
 
 ### Gestión de usuario
