@@ -341,7 +341,7 @@ def board_export_csv(request, pk):
         Task.objects.filter(task_list__board=board)
         .select_related("task_list", "assignee")
         .prefetch_related("tags")
-        .order_by("task_list__position", "pk")
+        .order_by("task_list__position", "position", "pk")
     )
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
@@ -392,7 +392,9 @@ def _get_owned_board_with_tasks(user, board_pk):
                 queryset=TaskList.objects.prefetch_related(
                     Prefetch(
                         "tasks",
-                        queryset=Task.objects.select_related("assignee").prefetch_related("tags").order_by("pk"),
+                        queryset=Task.objects.select_related("assignee").prefetch_related("tags").order_by(
+                            "position", "pk"
+                        ),
                     )
                 ).order_by("position", "pk"),
             )
@@ -424,6 +426,13 @@ def _build_task_move_form(board, task, data=None):
         task=task,
         prefix=f"move-{task.pk}",
     )
+
+
+def _get_next_task_position(task_list):
+    max_position = (
+        Task.objects.filter(task_list=task_list).aggregate(max_position=Max("position"))["max_position"] or 0
+    )
+    return max_position + 1
 
 
 def _get_task_from_board(board, task_pk):
@@ -480,7 +489,7 @@ def task_list(request):
         Task.objects.filter(task_list__board__owner=request.user)
         .select_related("task_list", "task_list__board", "assignee")
         .prefetch_related("tags")
-        .order_by("task_list__board__name", "task_list__position", "pk")
+        .order_by("task_list__board__name", "task_list__position", "position", "pk")
     )
     filter_form = TaskFilterForm(request.GET, user=request.user)
     filter_form.is_valid()
@@ -546,7 +555,10 @@ def task_create(request, board_pk=None):
     if request.method == 'POST':
         form = TaskForm(request.POST, board=board, user=request.user)
         if form.is_valid():
-            task = form.save()
+            task = form.save(commit=False)
+            task.position = _get_next_task_position(task.task_list)
+            task.save()
+            form.save_m2m()
             return redirect('board_detail', pk=task.task_list.board_id)
     else:
         form_kwargs = {
@@ -589,11 +601,16 @@ def task_update(request, pk):
         pk=pk,
     )
     board = task.task_list.board
+    original_task_list_id = task.task_list_id
 
     if request.method == 'POST':
         form = TaskForm(request.POST, instance=task, board=board, user=request.user)
         if form.is_valid():
-            form.save()
+            task = form.save(commit=False)
+            if task.task_list_id != original_task_list_id:
+                task.position = _get_next_task_position(task.task_list)
+            task.save()
+            form.save_m2m()
             return redirect('board_detail', pk=board.pk)
     else:
         form = TaskForm(instance=task, board=board, user=request.user)
@@ -651,7 +668,8 @@ def board_task_move(request, board_pk, pk):
     form = _build_task_move_form(board, task, data=request.POST)
     if form.is_valid():
         task.task_list = form.cleaned_data["task_list"]
-        task.save()
+        task.position = _get_next_task_position(task.task_list)
+        task.save(update_fields=["task_list", "position"])
         return redirect("board_detail", pk=board.pk)
 
     context = _build_board_detail_context(board, bound_move_form=form)

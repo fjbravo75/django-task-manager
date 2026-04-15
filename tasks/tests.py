@@ -4,9 +4,11 @@ from io import StringIO
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
 from tasks.demo_data import DEFAULT_DEMO_PASSWORD, DEMO_USERNAME, get_demo_totals
@@ -116,9 +118,12 @@ class AuthenticationFlowTests(TestCase):
             f'<a class="auth-card__link" href="{reverse("login")}">Volver al login</a>',
             html=True,
         )
-        self.assertContains(response, "Hasta 50 caracteres. Puedes usar letras, números y @/./+/-/_.")
-        self.assertContains(response, "Tu contraseña debe contener al menos 8 caracteres.")
-        self.assertContains(response, "Repite la misma contraseña para confirmar que la has escrito bien.")
+        self.assertContains(response, "Usa letras, números y los símbolos habituales para identificar tu cuenta.")
+        self.assertContains(
+            response,
+            "Usa una clave segura, con al menos 8 caracteres, y evita opciones demasiado comunes o fáciles de adivinar.",
+        )
+        self.assertContains(response, "Repite la misma contraseña para confirmar el acceso.")
         self.assertNotContains(response, "app-header__login-link")
         self.assertNotContains(response, "app-header__actions")
 
@@ -209,6 +214,65 @@ class AuthenticationFlowTests(TestCase):
         self.assertContains(response, "Sesión iniciada como alice")
         self.assertContains(response, reverse("logout"))
         self.assertContains(response, "Cerrar sesión")
+
+
+class TaskPositionMigrationTests(TransactionTestCase):
+    migrate_from = ("tasks", "0002_kanban_base")
+    migrate_to = ("tasks", "0003_task_position")
+    reset_sequences = True
+
+    def setUp(self):
+        super().setUp()
+        executor = MigrationExecutor(connection)
+        executor.migrate([self.migrate_from])
+        old_apps = executor.loader.project_state([self.migrate_from]).apps
+
+        User = old_apps.get_model("auth", "User")
+        Board = old_apps.get_model("tasks", "Board")
+        TaskList = old_apps.get_model("tasks", "TaskList")
+        Task = old_apps.get_model("tasks", "Task")
+
+        user = User.objects.create(username="alice")
+        board = Board.objects.create(name="Board A", owner=user)
+        todo = TaskList.objects.create(board=board, name="Todo", position=1)
+        doing = TaskList.objects.create(board=board, name="Doing", position=2)
+
+        self.todo_task_ids = [
+            Task.objects.create(title="Todo first", task_list=todo).pk,
+            Task.objects.create(title="Todo second", task_list=todo).pk,
+            Task.objects.create(title="Todo third", task_list=todo).pk,
+        ]
+        self.doing_task_ids = [
+            Task.objects.create(title="Doing first", task_list=doing).pk,
+            Task.objects.create(title="Doing second", task_list=doing).pk,
+        ]
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([self.migrate_to])
+        self.apps = executor.loader.project_state([self.migrate_to]).apps
+
+    def test_backfill_assigns_dense_positions_per_task_list_following_pk_order(self):
+        Task = self.apps.get_model("tasks", "Task")
+
+        todo_positions = list(
+            Task.objects.filter(pk__in=self.todo_task_ids)
+            .order_by("position", "pk")
+            .values_list("title", "position")
+        )
+        doing_positions = list(
+            Task.objects.filter(pk__in=self.doing_task_ids)
+            .order_by("position", "pk")
+            .values_list("title", "position")
+        )
+
+        self.assertEqual(
+            todo_positions,
+            [("Todo first", 1), ("Todo second", 2), ("Todo third", 3)],
+        )
+        self.assertEqual(
+            doing_positions,
+            [("Doing first", 1), ("Doing second", 2)],
+        )
 
 
 class BoardTaskAuthorizationTests(TestCase):
@@ -1129,6 +1193,9 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Solo se muestran listas del tablero actual.")
 
     def test_board_task_create_creates_task_in_selected_list_and_redirects_to_detail(self):
+        self.task_a.position = 1
+        self.task_a.save(update_fields=["position"])
+        Task.objects.create(title="Task before release", task_list=self.todo_a, position=2)
         self.client.force_login(self.user_a)
 
         response = self.client.post(
@@ -1146,6 +1213,7 @@ class BoardTaskAuthorizationTests(TestCase):
         task = Task.objects.get(title="Plan de release")
 
         self.assertEqual(task.task_list, self.todo_a)
+        self.assertEqual(task.position, 3)
         self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
 
         board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
@@ -1191,6 +1259,9 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(task_list_response, "Fecha límite: 28/03/2026")
 
     def test_task_create_with_owned_task_list_query_param_persists_priority_and_due_date(self):
+        self.task_a.position = 1
+        self.task_a.save(update_fields=["position"])
+        Task.objects.create(title="Task in queue", task_list=self.todo_a, position=2)
         self.client.force_login(self.user_a)
 
         response = self.client.post(
@@ -1208,6 +1279,7 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
         self.assertEqual(task.task_list, self.todo_a)
+        self.assertEqual(task.position, 3)
         self.assertEqual(task.priority, Task.PRIORITY_LOW)
         self.assertEqual(task.due_date, date(2026, 4, 9))
 
@@ -1324,6 +1396,8 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Asignada a")
 
     def test_task_update_assigns_task_to_board_owner(self):
+        self.task_a.position = 4
+        self.task_a.save(update_fields=["position"])
         self.client.force_login(self.user_a)
 
         response = self.client.post(
@@ -1343,11 +1417,39 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
         self.assertEqual(self.task_a.assignee, self.user_a)
+        self.assertEqual(self.task_a.position, 4)
+
+    def test_task_update_moves_task_to_end_of_new_list_when_task_list_changes(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.task_a.position = 1
+        self.task_a.save(update_fields=["position"])
+        Task.objects.create(title="Doing first", task_list=doing, position=1)
+        Task.objects.create(title="Doing second", task_list=doing, position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("task_update", args=[self.task_a.pk]),
+            {
+                "title": "Task A moved",
+                "description": "Updated from the UI",
+                "task_list": doing.pk,
+                "priority": Task.PRIORITY_MEDIUM,
+                "due_date": "",
+                "tags": [],
+            },
+        )
+
+        self.task_a.refresh_from_db()
+
+        self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertEqual(self.task_a.task_list, doing)
+        self.assertEqual(self.task_a.position, 3)
 
     def test_task_update_persists_priority_and_modified_due_date_and_renders_updated_values(self):
         self.task_a.priority = Task.PRIORITY_LOW
         self.task_a.due_date = date(2026, 1, 10)
-        self.task_a.save(update_fields=["priority", "due_date"])
+        self.task_a.position = 2
+        self.task_a.save(update_fields=["priority", "due_date", "position"])
         self.client.force_login(self.user_a)
 
         response = self.client.post(
@@ -1367,6 +1469,7 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
         self.assertEqual(self.task_a.priority, Task.PRIORITY_HIGH)
         self.assertEqual(self.task_a.due_date, date(2026, 4, 12))
+        self.assertEqual(self.task_a.position, 2)
 
         board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
         task_detail_response = self.client.get(reverse("task_detail", args=[self.task_a.pk]))
@@ -1456,6 +1559,19 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, reverse("task_detail", args=[self.task_a.pk]))
         self.assertContains(response, reverse("task_update", args=[self.task_a.pk]))
         self.assertContains(response, reverse("task_delete", args=[self.task_a.pk]))
+
+    def test_board_detail_orders_tasks_by_position_then_pk(self):
+        self.task_a.position = 3
+        self.task_a.save(update_fields=["position"])
+        task_first = Task.objects.create(title="Task first by position", task_list=self.todo_a, position=1)
+        task_second = Task.objects.create(title="Task second by position", task_list=self.todo_a, position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+        content = response.content.decode("utf-8")
+
+        self.assertLess(content.index(task_first.title), content.index(task_second.title))
+        self.assertLess(content.index(task_second.title), content.index(self.task_a.title))
 
     def test_board_detail_shows_task_delete_action_for_hidden_task(self):
         hidden_task = self.task_a
@@ -1555,17 +1671,19 @@ class BoardTaskAuthorizationTests(TestCase):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
         backend = Tag.objects.create(board=self.board_a, name="Backend")
         api = Tag.objects.create(board=self.board_a, name="API")
+        self.task_a.position = 1
         self.task_a.description = "Preparar backlog"
         self.task_a.priority = Task.PRIORITY_HIGH
         self.task_a.due_date = date(2026, 4, 15)
         self.task_a.assignee = self.user_a
-        self.task_a.save(update_fields=["description", "priority", "due_date", "assignee"])
+        self.task_a.save(update_fields=["position", "description", "priority", "due_date", "assignee"])
         self.task_a.tags.set([backend, api])
         later_task = Task.objects.create(
             title="Task B2",
             description="",
             task_list=doing,
             priority=Task.PRIORITY_LOW,
+            position=1,
         )
         self.client.force_login(self.user_a)
 
@@ -1612,6 +1730,23 @@ class BoardTaskAuthorizationTests(TestCase):
         )
         self.assertEqual(len(rows), 3)
 
+    def test_board_export_csv_orders_tasks_by_task_list_position_then_task_position_then_pk(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.task_a.position = 3
+        self.task_a.save(update_fields=["position"])
+        first_todo = Task.objects.create(title="Task first todo", task_list=self.todo_a, position=1)
+        second_todo = Task.objects.create(title="Task second todo", task_list=self.todo_a, position=2)
+        doing_task = Task.objects.create(title="Task doing", task_list=doing, position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_export_csv", args=[self.board_a.pk]))
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8"))))
+
+        self.assertEqual(
+            [row[2] for row in rows[1:]],
+            [first_todo.title, second_todo.title, self.task_a.title, doing_task.title],
+        )
+
     def test_board_export_csv_for_empty_board_returns_header_only(self):
         empty_board = Board.objects.create(name="Board Empty", owner=self.user_a)
         self.client.force_login(self.user_a)
@@ -1627,6 +1762,9 @@ class BoardTaskAuthorizationTests(TestCase):
 
     def test_board_task_move_moves_task_to_another_list_and_redirects_to_detail(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        Task.objects.create(title="Doing existing", task_list=doing, position=1)
+        self.task_a.position = 1
+        self.task_a.save(update_fields=["position"])
         self.client.force_login(self.user_a)
 
         response = self.client.post(
@@ -1639,6 +1777,7 @@ class BoardTaskAuthorizationTests(TestCase):
         self.task_a.refresh_from_db()
 
         self.assertEqual(self.task_a.task_list, doing)
+        self.assertEqual(self.task_a.position, 2)
         self.assertRedirects(response, reverse("board_detail", args=[self.board_a.pk]))
 
         board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
@@ -1690,6 +1829,23 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(list(response.context["form"].fields["assignee"].queryset), [self.user_a])
         self.assertNotIn("tags", response.context["form"].fields)
         self.assertContains(response, "Las etiquetas se asignan cuando la tarea se crea desde un tablero concreto.")
+
+    def test_task_list_orders_tasks_by_task_list_position_then_task_position_then_pk(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.task_a.title = "Task third in order"
+        self.task_a.position = 3
+        self.task_a.save(update_fields=["title", "position"])
+        first_todo = Task.objects.create(title="Task first in order", task_list=self.todo_a, position=1)
+        second_todo = Task.objects.create(title="Task second in order", task_list=self.todo_a, position=2)
+        doing_task = Task.objects.create(title="Task doing in order", task_list=doing, position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("task_list"))
+        content = response.content.decode("utf-8")
+
+        self.assertLess(content.index(first_todo.title), content.index(second_todo.title))
+        self.assertLess(content.index(second_todo.title), content.index(self.task_a.title))
+        self.assertLess(content.index(self.task_a.title), content.index(doing_task.title))
 
     def test_task_create_with_owned_task_list_query_param_exposes_matching_board_tags(self):
         tag_a = Tag.objects.create(board=self.board_a, name="Backend")

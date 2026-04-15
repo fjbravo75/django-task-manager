@@ -74,6 +74,7 @@ class Task(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     task_list = models.ForeignKey(TaskList, on_delete=models.CASCADE, related_name="tasks")
+    position = models.PositiveIntegerField(default=0)
     assignee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -88,7 +89,7 @@ class Task(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["pk"]
+        ordering = ["task_list_id", "position", "pk"]
 
     def __str__(self):
         return self.title
