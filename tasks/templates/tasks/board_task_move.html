@@ -1,0 +1,418 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}Mover tareas | {{ board.name }}{% endblock %}
+
+{% block content %}
+    <section
+        class="page-section content-frame board-move-screen space-y-5 pt-2"
+        data-board-task-move-screen
+        data-board-reorder-url="{% url 'board_task_reorder' board.pk %}"
+        data-source-list-id="{% if active_task_list %}{{ active_task_list.pk }}{% endif %}"
+        data-selected-task-id="{% if selected_task %}{{ selected_task.pk }}{% endif %}"
+    >
+        <header class="board-move-screen__header">
+            <div class="board-move-screen__intro">
+                <a
+                    class="inline-flex items-center text-sm font-medium text-slate-600 transition hover:text-slate-900"
+                    href="{% url 'board_detail' board.pk %}"
+                >
+                    ← Volver al tablero
+                </a>
+
+                <h1 class="board-move-screen__title">
+                    Mover tareas
+                </h1>
+
+                <p class="board-move-screen__subtitle">
+                    Mueve una tarea desde una lista origen a otra lista del tablero con un flujo claro y compacto.
+                </p>
+            </div>
+        </header>
+
+        <section class="board-move-layout">
+            <article class="board-move-panel board-move-panel--source">
+                <header class="board-move-panel__header">
+                    <div class="board-move-panel__heading">
+                        <h2 class="board-move-panel__title">Lista de origen</h2>
+                        <p class="board-move-panel__text">Elige la lista y después la tarea.</p>
+                    </div>
+
+                    {% if board.task_lists.all %}
+                        <form class="board-move-source-picker" method="get">
+                            <label class="board-move-source-picker__label" for="board-move-source-list">Lista</label>
+                            <div class="board-move-source-picker__controls">
+                                <select
+                                    id="board-move-source-list"
+                                    name="source_list"
+                                    onchange="this.form.submit()"
+                                >
+                                    {% for task_list in board.task_lists.all %}
+                                        <option
+                                            value="{{ task_list.pk }}"
+                                            {% if active_task_list and task_list.pk == active_task_list.pk %}selected{% endif %}
+                                        >
+                                            {{ task_list.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+                    {% endif %}
+
+                    {% if active_task_list %}
+                        <div class="board-move-source-summary">
+                            <div class="board-move-source-summary__meta">
+                                <span class="board-move-selection__name">{{ active_task_list.name }}</span>
+                                <span class="board-move-selection__count">{{ active_tasks|length }} tarea{{ active_tasks|length|pluralize:"s" }}</span>
+                            </div>
+                            <p class="board-move-source-summary__hint">
+                                {% if selected_task %}
+                                    Seleccionada: <strong>{{ selected_task.title }}</strong>
+                                {% else %}
+                                    Elige la lista y después la tarea.
+                                {% endif %}
+                            </p>
+                            <div class="board-move-source-summary__divider" aria-hidden="true"></div>
+                        </div>
+                    {% endif %}
+                </header>
+
+                <div class="board-move-panel__body">
+                    {% if active_task_list %}
+                        {% if active_tasks %}
+                            <div class="board-move-task-list" role="list">
+                                {% for task in active_tasks %}
+                                    <a
+                                        class="board-move-task{% if selected_task and task.pk == selected_task.pk %} board-move-task--selected{% endif %}"
+                                        href="?source_list={{ active_task_list.pk }}&task={{ task.pk }}"
+                                        draggable="true"
+                                        data-move-task
+                                        data-move-task-id="{{ task.pk }}"
+                                        data-move-task-title="{{ task.title }}"
+                                        data-selected="{% if selected_task and task.pk == selected_task.pk %}true{% else %}false{% endif %}"
+                                    >
+                                        <div class="board-move-task__header">
+                                            <h3 class="board-move-task__title">{{ task.title }}</h3>
+                                            {% if selected_task and task.pk == selected_task.pk %}
+                                                <span class="board-move-task__selected-pill">Seleccionada</span>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if task.description %}
+                                            <p class="board-move-task__description">{{ task.description|striptags|truncatechars:120 }}</p>
+                                        {% endif %}
+
+                                        <div class="board-move-task__meta">
+                                            <span class="board-move-task__meta-pill">{{ task.get_priority_display }}</span>
+                                            {% if task.compact_due_date_label %}
+                                                <span class="board-move-task__meta-pill">{{ task.compact_due_date_label }}</span>
+                                            {% endif %}
+                                            {% if task.assignee %}
+                                                <span class="board-move-task__meta-pill">{{ task.assignee.username }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="board-move-empty">
+                                <p>La lista seleccionada no tiene tareas para mover.</p>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="board-move-empty">
+                            <p>Este tablero todavía no tiene listas.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="board-move-panel board-move-panel--destinations">
+                <header class="board-move-panel__header">
+                    <div class="board-move-panel__heading">
+                        <h2 class="board-move-panel__title">Listas de destino</h2>
+                        <p class="board-move-panel__text">Elige una lista de destino.</p>
+                    </div>
+
+                    <div
+                        class="board-move-context-note"
+                        data-board-task-move-status
+                        {% if move_feedback %}
+                            data-state="success"
+                        {% endif %}
+                        aria-live="polite"
+                    >
+                        {% if move_feedback %}
+                            {{ move_feedback }}
+                        {% elif not selected_task %}
+                            Selecciona o arrastra una tarea desde la izquierda.
+                        {% else %}
+                            Elige una lista de destino o suéltala sobre una de ellas.
+                        {% endif %}
+                    </div>
+                </header>
+
+                <div class="board-move-panel__body">
+                    {% if destination_task_lists %}
+                        <div class="board-move-destination-list" role="list">
+                            {% for item in destination_task_lists %}
+                                <button
+                                    class="board-move-destination"
+                                    type="button"
+                                    data-move-destination-button
+                                    data-target-task-list-id="{{ item.task_list.pk }}"
+                                    data-target-task-count="{{ item.total_tasks }}"
+                                    data-target-task-list-name="{{ item.task_list.name }}"
+                                    {% if not selected_task %}aria-disabled="true"{% endif %}
+                                >
+                                    <div class="board-move-destination__header">
+                                        <h3 class="board-move-destination__title">{{ item.task_list.name }}</h3>
+                                        <span class="board-move-destination__count">{{ item.total_tasks }} tarea{{ item.total_tasks|pluralize:"s" }}</span>
+                                    </div>
+
+                                    {% if item.task_list.description %}
+                                        <p class="board-move-destination__description">{{ item.task_list.description|striptags|truncatechars:120 }}</p>
+                                    {% endif %}
+
+                                    <div class="board-move-destination__footer">
+                                        <span class="board-move-destination__action">
+                                            {% if selected_task %}
+                                                Mover al final
+                                            {% else %}
+                                                Selecciona o arrastra una tarea
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </button>
+                            {% endfor %}
+                        </div>
+                    {% elif active_task_list %}
+                        <div class="board-move-empty">
+                            <p>Necesitas al menos otra lista en este tablero para poder mover tareas.</p>
+                        </div>
+                    {% else %}
+                        <div class="board-move-empty">
+                            <p>Aquí aparecerán las listas destino cuando el tablero tenga más de una lista.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+        </section>
+    </section>
+
+    <script>
+        (function () {
+          const screen = document.querySelector("[data-board-task-move-screen]");
+          if (!screen) {
+            return;
+          }
+
+          const reorderUrl = screen.dataset.boardReorderUrl;
+          const sourceListId = Number(screen.dataset.sourceListId);
+          const selectedTaskId = Number(screen.dataset.selectedTaskId);
+          const statusNode = screen.querySelector("[data-board-task-move-status]");
+          const sourceTasks = Array.from(screen.querySelectorAll("[data-move-task]"));
+          const destinationButtons = Array.from(screen.querySelectorAll("[data-move-destination-button]"));
+          let draggedTask = null;
+
+          function getCookie(name) {
+            const cookies = document.cookie ? document.cookie.split(";") : [];
+            for (const cookieChunk of cookies) {
+              const cookie = cookieChunk.trim();
+              if (cookie.startsWith(`${name}=`)) {
+                return decodeURIComponent(cookie.slice(name.length + 1));
+              }
+            }
+            return "";
+          }
+
+          function setStatus(message, state) {
+            if (!statusNode) {
+              return;
+            }
+
+            if (!message) {
+              statusNode.textContent = "";
+              statusNode.dataset.visible = "false";
+              delete statusNode.dataset.state;
+              return;
+            }
+
+            statusNode.textContent = message;
+            statusNode.dataset.visible = "true";
+            statusNode.dataset.state = state || "info";
+          }
+
+          function getTaskForAction() {
+            if (draggedTask && draggedTask.taskId) {
+              return draggedTask;
+            }
+
+            if (selectedTaskId) {
+              return {
+                taskId: selectedTaskId,
+                taskTitle: "",
+              };
+            }
+
+            return null;
+          }
+
+          function clearDropState() {
+            destinationButtons.forEach((button) => {
+              delete button.dataset.dropActive;
+            });
+          }
+
+          function setDraggingState(taskNode, isDragging) {
+            if (!taskNode) {
+              return;
+            }
+
+            if (isDragging) {
+              taskNode.dataset.dragging = "true";
+              return;
+            }
+
+            delete taskNode.dataset.dragging;
+          }
+
+          function setButtonsBusy(isBusy) {
+            destinationButtons.forEach((button) => {
+              if (isBusy) {
+                button.dataset.busy = "true";
+                return;
+              }
+
+              delete button.dataset.busy;
+            });
+          }
+
+          async function moveTask(button, taskInfo) {
+            if (!taskInfo || !taskInfo.taskId || !sourceListId) {
+              setStatus("Selecciona o arrastra una tarea antes de elegir un destino.", "error");
+              return;
+            }
+
+            const targetTaskListId = Number(button.dataset.targetTaskListId);
+            const targetTaskCount = Number(button.dataset.targetTaskCount || "0");
+
+            clearDropState();
+            setButtonsBusy(true);
+            setStatus("Moviendo tarea al final de la lista destino...", "info");
+
+            try {
+              const response = await fetch(reorderUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": getCookie("csrftoken"),
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+                body: JSON.stringify({
+                  task_id: taskInfo.taskId,
+                  target_task_list_id: targetTaskListId,
+                  target_position: targetTaskCount + 1,
+                }),
+              });
+
+              let responseData = null;
+              try {
+                responseData = await response.json();
+              } catch (error) {
+                responseData = null;
+              }
+
+              if (!response.ok || !responseData || responseData.ok !== true) {
+                throw new Error("move_failed");
+              }
+
+              const redirectUrl = new URL(window.location.href);
+              redirectUrl.searchParams.set("source_list", String(sourceListId));
+              redirectUrl.searchParams.set("moved", "1");
+              redirectUrl.searchParams.set("target_list", String(targetTaskListId));
+              redirectUrl.searchParams.delete("task");
+
+              const targetTaskListName = button.dataset.targetTaskListName || "la lista destino";
+              setStatus(`Tarea movida al final de "${targetTaskListName}".`, "success");
+              window.location.assign(redirectUrl.toString());
+            } catch (error) {
+              setButtonsBusy(false);
+              setStatus("No se pudo mover la tarea. Recarga la pantalla y vuelve a intentarlo.", "error");
+            }
+          }
+
+          sourceTasks.forEach((taskNode) => {
+            taskNode.addEventListener("dragstart", (event) => {
+              draggedTask = {
+                taskId: Number(taskNode.dataset.moveTaskId),
+                taskTitle: taskNode.dataset.moveTaskTitle || "",
+              };
+              setDraggingState(taskNode, true);
+
+              if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", String(draggedTask.taskId));
+              }
+
+              setStatus("Arrastra la tarea hacia una lista destino y suéltala para moverla al final.", "info");
+            });
+
+            taskNode.addEventListener("dragend", () => {
+              setDraggingState(taskNode, false);
+              draggedTask = null;
+              clearDropState();
+            });
+          });
+
+          destinationButtons.forEach((button) => {
+            button.addEventListener("dragenter", (event) => {
+              if (!draggedTask || button.dataset.busy === "true") {
+                return;
+              }
+
+              event.preventDefault();
+              button.dataset.dropActive = "true";
+            });
+
+            button.addEventListener("dragover", (event) => {
+              if (!draggedTask || button.dataset.busy === "true") {
+                return;
+              }
+
+              event.preventDefault();
+              if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = "move";
+              }
+              button.dataset.dropActive = "true";
+            });
+
+            button.addEventListener("dragleave", (event) => {
+              if (!button.contains(event.relatedTarget)) {
+                delete button.dataset.dropActive;
+              }
+            });
+
+            button.addEventListener("drop", (event) => {
+              if (!draggedTask || button.dataset.busy === "true") {
+                return;
+              }
+
+              event.preventDefault();
+              moveTask(button, draggedTask);
+            });
+          });
+
+          screen.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-move-destination-button]");
+            if (!button || button.dataset.busy === "true") {
+              return;
+            }
+
+            event.preventDefault();
+            moveTask(button, getTaskForAction());
+          });
+        })();
+    </script>
+{% endblock %}

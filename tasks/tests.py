@@ -1073,7 +1073,7 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Editar tablero")
         self.assertContains(response, "Borrar tablero")
 
-    def test_board_detail_shows_action_group_labels_and_export_csv_button(self):
+    def test_board_detail_shows_action_group_labels_export_csv_and_move_tasks_button(self):
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
@@ -1084,6 +1084,8 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, "Tareas")
         self.assertContains(response, reverse("board_export_csv", args=[self.board_a.pk]))
         self.assertContains(response, "Exportar CSV")
+        self.assertContains(response, reverse("board_task_move_screen", args=[self.board_a.pk]))
+        self.assertContains(response, "Mover tareas")
 
     def test_board_detail_shows_task_create_cta_for_each_task_list(self):
         empty_task_list = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
@@ -1102,33 +1104,158 @@ class BoardTaskAuthorizationTests(TestCase):
         )
         self.assertContains(response, "Crear la primera tarea")
 
-    def test_board_detail_shows_quick_reorder_controls_and_manual_move_fallback_when_board_has_another_list(self):
+    def test_board_detail_uses_lightweight_global_action_links_and_keeps_primary_task_cta(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="board-actions__link"', count=6, html=False)
+        self.assertContains(response, 'class="board-actions__cta"', count=1, html=False)
+        self.assertNotContains(response, "rounded-xl border border-slate-300 bg-white px-5 py-3", html=False)
+
+    def test_board_detail_adds_move_link_next_to_task_secondary_actions(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        detail_url = reverse("task_detail", args=[self.task_a.pk])
+        move_url = f'{reverse("board_task_move_screen", args=[self.board_a.pk])}?source_list={self.todo_a.pk}&task={self.task_a.pk}'
+        edit_url = reverse("task_update", args=[self.task_a.pk])
+        self.assertContains(
+            response,
+            move_url,
+        )
+        content = response.content.decode("utf-8")
+        self.assertLess(content.index(detail_url), content.index(move_url))
+        self.assertLess(content.index(move_url), content.index(edit_url))
+
+    def test_board_detail_hides_quick_reorder_controls_and_manual_move_fallback(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, reverse("board_task_reorder", args=[self.board_a.pk]))
-        self.assertContains(response, 'data-reorder-action="up"', html=False)
-        self.assertContains(response, 'data-reorder-action="down"', html=False)
-        self.assertContains(response, 'data-reorder-target-list', html=False)
-        self.assertContains(response, "Mover manualmente")
-        self.assertContains(response, reverse("board_task_move", args=[self.board_a.pk, self.task_a.pk]))
-        self.assertContains(response, 'name="move-{}-task_list"'.format(self.task_a.pk), html=False)
         self.assertContains(response, doing.name)
+        self.assertNotContains(response, reverse("board_task_reorder", args=[self.board_a.pk]))
+        self.assertNotContains(response, 'data-reorder-action="up"', html=False)
+        self.assertNotContains(response, 'data-reorder-action="down"', html=False)
+        self.assertNotContains(response, 'data-reorder-target-list', html=False)
+        self.assertNotContains(response, "Mover manualmente")
+        self.assertNotContains(response, reverse("board_task_move", args=[self.board_a.pk, self.task_a.pk]))
 
-    def test_board_detail_loads_localized_reorder_script_and_dom_hooks(self):
+    def test_board_detail_does_not_load_reorder_script_or_dom_hooks(self):
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "tasks/board_detail.js")
-        self.assertContains(response, 'data-board-detail', html=False)
-        self.assertContains(response, f'data-task-list-id="{self.todo_a.pk}"', html=False)
-        self.assertContains(response, f'data-task-id="{self.task_a.pk}"', html=False)
-        self.assertContains(response, f'data-board-reorder-url="{reverse("board_task_reorder", args=[self.board_a.pk])}"', html=False)
+        self.assertNotContains(response, "tasks/board_detail.js")
+        self.assertNotContains(response, 'data-board-detail', html=False)
+        self.assertNotContains(response, f'data-task-list-id="{self.todo_a.pk}"', html=False)
+        self.assertNotContains(response, f'data-task-id="{self.task_a.pk}"', html=False)
+        self.assertNotContains(response, f'data-board-reorder-url="{reverse("board_task_reorder", args=[self.board_a.pk])}"', html=False)
+
+    def test_board_task_move_screen_renders_operable_layout_for_owned_board(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_move_screen", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "tasks/board_task_move.html")
+        self.assertContains(response, "Mover tareas")
+        self.assertContains(response, "Lista de origen")
+        self.assertContains(response, "Listas de destino")
+        self.assertContains(response, self.todo_a.name)
+        self.assertContains(response, doing.name)
+        self.assertContains(response, self.task_a.title)
+        self.assertContains(response, 'data-board-task-move-screen', html=False)
+        self.assertContains(
+            response,
+            f'data-board-reorder-url="{reverse("board_task_reorder", args=[self.board_a.pk])}"',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            "Selecciona o arrastra una tarea desde la izquierda.",
+        )
+        self.assertContains(response, "board-move-context-note", html=False)
+        self.assertContains(response, "board-move-source-summary", html=False)
+        self.assertContains(response, reverse("board_detail", args=[self.board_a.pk]))
+        self.assertNotContains(response, "tasks/board_detail.js")
+        self.assertNotContains(response, "Pantalla en preparación")
+        self.assertNotContains(response, "board-move-status", html=False)
+        self.assertContains(response, 'draggable="true"', html=False)
+        self.assertContains(response, f'data-move-task-id="{self.task_a.pk}"', html=False)
+        self.assertContains(response, 'aria-disabled="true"', html=False)
+        self.assertNotContains(response, " disabled", html=False)
+
+    def test_board_task_move_screen_selects_first_task_list_by_default(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        Task.objects.create(title="Task in doing", task_list=doing, position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_move_screen", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="source_list"', html=False)
+        self.assertContains(response, f'value="{self.todo_a.pk}"', html=False)
+        self.assertContains(response, f'data-source-list-id="{self.todo_a.pk}"', html=False)
+        self.assertContains(response, f'data-target-task-list-id="{doing.pk}"', html=False)
+        self.assertNotContains(response, f'data-target-task-list-id="{self.todo_a.pk}"', html=False)
+        self.assertNotContains(response, ">Abrir<", html=False)
+        self.assertContains(response, 'onchange="this.form.submit()"', html=False)
+
+    def test_board_task_move_screen_can_focus_another_source_list_and_selected_task(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        doing_task = Task.objects.create(title="Task in doing", task_list=doing, position=1)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            f'{reverse("board_task_move_screen", args=[self.board_a.pk])}?source_list={doing.pk}&task={doing_task.pk}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="source_list"', html=False)
+        self.assertContains(response, f'value="{doing.pk}"', html=False)
+        self.assertContains(response, f'data-source-list-id="{doing.pk}"', html=False)
+        self.assertContains(response, f'data-selected-task-id="{doing_task.pk}"', html=False)
+        self.assertContains(response, 'data-selected="true"', html=False)
+        self.assertContains(response, "Seleccionada:")
+        self.assertContains(response, doing_task.title)
+        self.assertContains(response, f'data-target-task-list-id="{self.todo_a.pk}"', html=False)
+        self.assertNotContains(response, f'data-target-task-list-id="{doing.pk}"', html=False)
+        self.assertNotContains(response, 'aria-disabled="true"', html=False)
+        self.assertContains(response, "Elige una lista de destino o suéltala sobre una de ellas.")
+
+    def test_board_task_move_screen_shows_success_feedback_after_move_query_params(self):
+        doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            f'{reverse("board_task_move_screen", args=[self.board_a.pk])}?source_list={self.todo_a.pk}&moved=1&target_list={doing.pk}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-state="success"', html=False)
+        self.assertContains(response, 'Tarea movida al final de &quot;Doing&quot;.', html=False)
+        self.assertNotContains(response, "board-move-status", html=False)
+
+    def test_board_task_move_screen_requires_authentication(self):
+        response = self.client.get(reverse("board_task_move_screen", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("board_task_move_screen", args=[self.board_a.pk]), response.url)
+
+    def test_user_cannot_open_board_task_move_screen_for_foreign_board(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_task_move_screen", args=[self.board_b.pk]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_board_task_create_preselects_task_list_from_query_param(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
@@ -1576,7 +1703,7 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertContains(response, self.task_a.get_priority_display())
         self.assertContains(response, reverse("task_detail", args=[self.task_a.pk]))
         self.assertContains(response, reverse("task_update", args=[self.task_a.pk]))
-        self.assertContains(response, reverse("task_delete", args=[self.task_a.pk]))
+        self.assertNotContains(response, reverse("task_delete", args=[self.task_a.pk]))
 
     def test_board_detail_orders_tasks_by_position_then_pk(self):
         self.task_a.position = 3
@@ -1591,32 +1718,50 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertLess(content.index(task_first.title), content.index(task_second.title))
         self.assertLess(content.index(task_second.title), content.index(self.task_a.title))
 
-    def test_board_detail_shows_all_tasks_without_hidden_summary(self):
-        last_task = self.task_a
-        for index in range(5):
-            last_task = Task.objects.create(
+    def test_board_detail_shows_only_preview_tasks_and_hidden_summary_per_list(self):
+        self.task_a.position = 1
+        self.task_a.save(update_fields=["position"])
+        visible_titles = []
+        for index in range(2, 6):
+            task = Task.objects.create(
                 title=f"Task visible {index}",
                 task_list=self.todo_a,
+                position=index,
             )
+            visible_titles.append(task.title)
+        hidden_task = Task.objects.create(
+            title="Task hidden from overview",
+            task_list=self.todo_a,
+            position=6,
+        )
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, last_task.title)
-        self.assertContains(response, reverse("task_delete", args=[last_task.pk]))
-        self.assertNotContains(response, "Mostrando 5 de")
-        self.assertNotContains(response, "Mostrar todas")
+        self.assertContains(response, self.task_a.title)
+        for title in visible_titles:
+            self.assertContains(response, title)
+        self.assertNotContains(response, hidden_task.title)
+        self.assertContains(response, "Hay 1 tarea más en esta lista.")
+        self.assertContains(
+            response,
+            f'{reverse("task_list")}?board={self.board_a.pk}&task_list={self.todo_a.pk}',
+        )
 
-    def test_board_detail_shows_compact_due_date_metadata_for_task_beyond_previous_visible_limit(self):
-        for index in range(5):
+    def test_board_detail_hides_due_date_metadata_for_tasks_beyond_preview_limit(self):
+        self.task_a.position = 1
+        self.task_a.save(update_fields=["position"])
+        for index in range(2, 6):
             Task.objects.create(
                 title=f"Task filler {index}",
                 task_list=self.todo_a,
+                position=index,
             )
         later_task = Task.objects.create(
             title="Task later with due date",
             task_list=self.todo_a,
+            position=6,
             priority=Task.PRIORITY_HIGH,
             due_date=date(2026, 5, 18),
         )
@@ -1625,11 +1770,11 @@ class BoardTaskAuthorizationTests(TestCase):
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, later_task.title)
-        self.assertContains(response, "Vence 18 may 2026")
+        self.assertNotContains(response, later_task.title)
+        self.assertNotContains(response, "Vence 18 may 2026")
         self.assertNotContains(response, "Fecha límite: 18/05/2026")
 
-    def test_board_detail_and_task_detail_show_task_tags(self):
+    def test_board_detail_hides_task_tags_but_task_detail_keeps_them(self):
         tag_a = Tag.objects.create(board=self.board_a, name="Backend")
         self.task_a.tags.add(tag_a)
         self.client.force_login(self.user_a)
@@ -1637,7 +1782,7 @@ class BoardTaskAuthorizationTests(TestCase):
         board_detail_response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
         task_detail_response = self.client.get(reverse("task_detail", args=[self.task_a.pk]))
 
-        self.assertContains(board_detail_response, "Etiquetas: Backend")
+        self.assertNotContains(board_detail_response, "Etiquetas: Backend")
         self.assertContains(task_detail_response, "Backend")
 
     def test_board_detail_shows_compact_tag_management_zone(self):
@@ -1822,7 +1967,7 @@ class BoardTaskAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.task_a.task_list, self.todo_a)
-        self.assertContains(response, "Selecciona una lista válida.")
+        self.assertNotContains(response, "Mover manualmente")
 
     def test_user_cannot_move_foreign_task_from_board_detail(self):
         self.client.force_login(self.user_a)
