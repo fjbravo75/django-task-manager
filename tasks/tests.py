@@ -1102,16 +1102,33 @@ class BoardTaskAuthorizationTests(TestCase):
         )
         self.assertContains(response, "Crear la primera tarea")
 
-    def test_board_detail_shows_task_move_control_when_board_has_another_list(self):
+    def test_board_detail_shows_quick_reorder_controls_and_manual_move_fallback_when_board_has_another_list(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("board_task_reorder", args=[self.board_a.pk]))
+        self.assertContains(response, 'data-reorder-action="up"', html=False)
+        self.assertContains(response, 'data-reorder-action="down"', html=False)
+        self.assertContains(response, 'data-reorder-target-list', html=False)
+        self.assertContains(response, "Mover manualmente")
         self.assertContains(response, reverse("board_task_move", args=[self.board_a.pk, self.task_a.pk]))
         self.assertContains(response, 'name="move-{}-task_list"'.format(self.task_a.pk), html=False)
         self.assertContains(response, doing.name)
+
+    def test_board_detail_loads_localized_reorder_script_and_dom_hooks(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "tasks/board_detail.js")
+        self.assertContains(response, 'data-board-detail', html=False)
+        self.assertContains(response, f'data-task-list-id="{self.todo_a.pk}"', html=False)
+        self.assertContains(response, f'data-task-id="{self.task_a.pk}"', html=False)
+        self.assertContains(response, f'data-board-reorder-url="{reverse("board_task_reorder", args=[self.board_a.pk])}"', html=False)
 
     def test_board_task_create_preselects_task_list_from_query_param(self):
         doing = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
@@ -1550,7 +1567,7 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertEqual(self.task_a.task_list, self.todo_a)
         self.assertFalse(self.task_a.tags.exists())
 
-    def test_board_detail_shows_priority_badge_and_task_actions_for_visible_task(self):
+    def test_board_detail_shows_priority_badge_and_task_actions_for_task(self):
         self.client.force_login(self.user_a)
 
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
@@ -1574,11 +1591,11 @@ class BoardTaskAuthorizationTests(TestCase):
         self.assertLess(content.index(task_first.title), content.index(task_second.title))
         self.assertLess(content.index(task_second.title), content.index(self.task_a.title))
 
-    def test_board_detail_shows_task_delete_action_for_hidden_task(self):
-        hidden_task = self.task_a
+    def test_board_detail_shows_all_tasks_without_hidden_summary(self):
+        last_task = self.task_a
         for index in range(5):
-            hidden_task = Task.objects.create(
-                title=f"Task hidden {index}",
+            last_task = Task.objects.create(
+                title=f"Task visible {index}",
                 task_list=self.todo_a,
             )
         self.client.force_login(self.user_a)
@@ -1586,16 +1603,19 @@ class BoardTaskAuthorizationTests(TestCase):
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, reverse("task_delete", args=[hidden_task.pk]))
+        self.assertContains(response, last_task.title)
+        self.assertContains(response, reverse("task_delete", args=[last_task.pk]))
+        self.assertNotContains(response, "Mostrando 5 de")
+        self.assertNotContains(response, "Mostrar todas")
 
-    def test_board_detail_shows_compact_due_date_metadata_for_hidden_task(self):
+    def test_board_detail_shows_compact_due_date_metadata_for_task_beyond_previous_visible_limit(self):
         for index in range(5):
             Task.objects.create(
                 title=f"Task filler {index}",
                 task_list=self.todo_a,
             )
-        hidden_task = Task.objects.create(
-            title="Task hidden with due date",
+        later_task = Task.objects.create(
+            title="Task later with due date",
             task_list=self.todo_a,
             priority=Task.PRIORITY_HIGH,
             due_date=date(2026, 5, 18),
@@ -1605,7 +1625,7 @@ class BoardTaskAuthorizationTests(TestCase):
         response = self.client.get(reverse("board_detail", args=[self.board_a.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, hidden_task.title)
+        self.assertContains(response, later_task.title)
         self.assertContains(response, "Vence 18 may 2026")
         self.assertNotContains(response, "Fecha límite: 18/05/2026")
 

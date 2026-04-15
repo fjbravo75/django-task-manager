@@ -547,16 +547,11 @@ def _build_board_detail_context(board, *, bound_move_form=None):
             else:
                 task.move_form = _build_task_move_form(board, task)
         total_tasks = len(all_tasks)
-        visible_tasks = all_tasks[:5]
-        hidden_tasks = all_tasks[5:]
-        has_hidden_tasks = total_tasks > 5
         board_task_lists.append(
             {
                 "task_list": task_list,
                 "total_tasks": total_tasks,
-                "visible_tasks": visible_tasks,
-                "hidden_tasks": hidden_tasks,
-                "has_hidden_tasks": has_hidden_tasks,
+                "tasks": all_tasks,
             }
         )
 
