@@ -4,11 +4,13 @@ Aplicación web de gestión de tareas construida con Django para organizar traba
 
 **Demo en vivo:** https://task.franciscojbravo.com  
 **Acceso demo:** `demo` / `DemoAccess123!`  
-**Stack principal:** Python, Django, PostgreSQL, SQLite, HTML, CSS
+**Stack principal:** Python, Django, PostgreSQL, SQLite, HTML, CSS, Vanilla JavaScript
 
 ## Resumen
 
 Django Task Manager permite a cada usuario gestionar sus propios tableros, crear listas dentro de ellos y organizar tareas con prioridad, fecha límite, etiquetas y asignación.
+
+`board_detail` actúa como overview principal del tablero y la operación visible de mover tareas vive en una pantalla específica, con flujo por clic y también con arrastrar y soltar usando JavaScript nativo.
 
 La aplicación está desplegada públicamente, puede probarse con acceso demo y también puede ejecutarse en local con una base de datos de ejemplo generada mediante comando.
 
@@ -37,7 +39,9 @@ Estas son algunas vistas reales de la aplicación en su estado actual.
 - crear, editar y borrar tableros
 - crear, renombrar y borrar listas dentro de cada tablero
 - crear, editar y borrar tareas dentro de una lista
-- mover tareas entre listas desde la propia vista del tablero
+- revisar cada tablero desde una vista overview con acciones globales y acceso directo a tareas
+- mover tareas entre listas desde una pantalla específica de movimiento
+- mover tareas de forma visible con flujo por clic y también con arrastrar y soltar en Vanilla JS
 
 ### Gestión de tareas
 - asignar prioridad
@@ -68,6 +72,7 @@ Estas son algunas vistas reales de la aplicación en su estado actual.
 - **SQLite** en local
 - **HTML renderizado en servidor**
 - **CSS propio**
+- **Vanilla JavaScript** para la interacción visible de mover tareas
 - **Tests con Django TestCase**
 
 ## Demo en vivo
@@ -162,6 +167,7 @@ Credenciales demo por defecto:
 
 - aplicación Django renderizada en servidor
 - alcance contenido y centrado en el flujo principal del producto
+- movimiento visible de tareas resuelto con Vanilla JS localizado, sin frontend separado
 - demo reproducible mediante comando de siembra
 - despliegue público con base de datos real en producción
 
