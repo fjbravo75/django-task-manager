@@ -1,4 +1,5 @@
 import csv
+import json
 from datetime import date
 from io import StringIO
 
@@ -1881,6 +1882,268 @@ class BoardTaskAuthorizationTests(TestCase):
             any("Select a valid choice." in error for error in form.errors["task_list"]),
         )
         self.assertFalse(Task.objects.filter(title="Intrusion attempt").exists())
+
+
+class BoardTaskReorderTests(TestCase):
+    def setUp(self):
+        self.user_a = User.objects.create_user(username="alice", password="testpass123")
+        self.user_b = User.objects.create_user(username="bob", password="testpass123")
+
+        self.board_a = Board.objects.create(name="Board A", owner=self.user_a)
+        self.board_b = Board.objects.create(name="Board B", owner=self.user_b)
+        self.board_c = Board.objects.create(name="Board C", owner=self.user_a)
+
+        self.todo_a = TaskList.objects.create(board=self.board_a, name="Todo", position=1)
+        self.doing_a = TaskList.objects.create(board=self.board_a, name="Doing", position=2)
+        self.todo_b = TaskList.objects.create(board=self.board_b, name="Todo", position=1)
+        self.review_c = TaskList.objects.create(board=self.board_c, name="Review", position=1)
+
+        self.todo_1 = Task.objects.create(title="Todo 1", task_list=self.todo_a, position=1)
+        self.todo_2 = Task.objects.create(title="Todo 2", task_list=self.todo_a, position=2)
+        self.todo_3 = Task.objects.create(title="Todo 3", task_list=self.todo_a, position=3)
+        self.doing_1 = Task.objects.create(title="Doing 1", task_list=self.doing_a, position=1)
+        self.doing_2 = Task.objects.create(title="Doing 2", task_list=self.doing_a, position=2)
+        self.foreign_task = Task.objects.create(title="Foreign task", task_list=self.todo_b, position=1)
+        self.other_board_task = Task.objects.create(title="Other board task", task_list=self.review_c, position=1)
+
+    def reorder_url(self, board=None):
+        board = board or self.board_a
+        return reverse("board_task_reorder", args=[board.pk])
+
+    def login(self):
+        self.client.force_login(self.user_a)
+
+    def post_reorder(self, payload, board=None):
+        return self.client.post(
+            self.reorder_url(board=board),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def assert_task_order(self, task_list, expected_titles):
+        tasks = list(Task.objects.filter(task_list=task_list).order_by("position", "pk"))
+        self.assertEqual([task.title for task in tasks], expected_titles)
+        self.assertEqual(
+            [task.position for task in tasks],
+            list(range(1, len(expected_titles) + 1)),
+        )
+
+    def test_board_task_reorder_requires_authentication(self):
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_1.pk,
+                "target_task_list_id": self.todo_a.pk,
+                "target_position": 1,
+            }
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(self.reorder_url(), response.url)
+
+    def test_board_task_reorder_returns_404_for_foreign_board(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.foreign_task.pk,
+                "target_task_list_id": self.todo_b.pk,
+                "target_position": 1,
+            },
+            board=self.board_b,
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_task_reorder_returns_404_when_task_does_not_belong_to_board_url(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.other_board_task.pk,
+                "target_task_list_id": self.todo_a.pk,
+                "target_position": 1,
+            }
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_task_reorder_returns_404_when_target_list_does_not_belong_to_board_url(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_1.pk,
+                "target_task_list_id": self.review_c.pk,
+                "target_position": 1,
+            }
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_board_task_reorder_returns_400_for_invalid_json(self):
+        self.login()
+
+        response = self.client.post(
+            self.reorder_url(),
+            data="{not-json",
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "invalid_json")
+
+    def test_board_task_reorder_returns_400_for_missing_fields(self):
+        self.login()
+
+        response = self.post_reorder({"task_id": self.todo_1.pk})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "missing_fields")
+        self.assertEqual(
+            response.json()["missing_fields"],
+            ["target_task_list_id", "target_position"],
+        )
+
+    def test_board_task_reorder_returns_400_for_invalid_target_position(self):
+        self.login()
+
+        invalid_values = [0, -1, "2", 1.5, True]
+        for invalid_value in invalid_values:
+            with self.subTest(target_position=invalid_value):
+                response = self.post_reorder(
+                    {
+                        "task_id": self.todo_1.pk,
+                        "target_task_list_id": self.todo_a.pk,
+                        "target_position": invalid_value,
+                    }
+                )
+
+                self.assertEqual(response.status_code, 400)
+
+    def test_board_task_reorder_within_same_list_upwards(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_3.pk,
+                "target_task_list_id": self.todo_a.pk,
+                "target_position": 1,
+            }
+        )
+
+        self.todo_3.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "ok": True,
+                "task_id": self.todo_3.pk,
+                "source_task_list_id": self.todo_a.pk,
+                "target_task_list_id": self.todo_a.pk,
+                "final_position": 1,
+            },
+        )
+        self.assertEqual(self.todo_3.task_list, self.todo_a)
+        self.assertEqual(self.todo_3.position, 1)
+        self.assert_task_order(self.todo_a, ["Todo 3", "Todo 1", "Todo 2"])
+
+    def test_board_task_reorder_within_same_list_downwards(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_1.pk,
+                "target_task_list_id": self.todo_a.pk,
+                "target_position": 3,
+            }
+        )
+
+        self.todo_1.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.todo_1.task_list, self.todo_a)
+        self.assertEqual(self.todo_1.position, 3)
+        self.assert_task_order(self.todo_a, ["Todo 2", "Todo 3", "Todo 1"])
+
+    def test_board_task_reorder_moves_task_between_lists(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_2.pk,
+                "target_task_list_id": self.doing_a.pk,
+                "target_position": 2,
+            }
+        )
+
+        self.todo_2.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.todo_2.task_list, self.doing_a)
+        self.assertEqual(self.todo_2.position, 2)
+        self.assert_task_order(self.todo_a, ["Todo 1", "Todo 3"])
+        self.assert_task_order(self.doing_a, ["Doing 1", "Todo 2", "Doing 2"])
+
+    def test_board_task_reorder_inserts_at_end_when_target_position_exceeds_destination_length(self):
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_2.pk,
+                "target_task_list_id": self.doing_a.pk,
+                "target_position": 99,
+            }
+        )
+
+        self.todo_2.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["final_position"], 3)
+        self.assertEqual(self.todo_2.task_list, self.doing_a)
+        self.assertEqual(self.todo_2.position, 3)
+        self.assert_task_order(self.doing_a, ["Doing 1", "Doing 2", "Todo 2"])
+
+    def test_board_task_reorder_leaves_dense_positions_without_gaps_in_source_and_destination(self):
+        Task.objects.filter(pk=self.todo_1.pk).update(position=2)
+        Task.objects.filter(pk=self.todo_2.pk).update(position=5)
+        Task.objects.filter(pk=self.todo_3.pk).update(position=9)
+        Task.objects.filter(pk=self.doing_1.pk).update(position=4)
+        Task.objects.filter(pk=self.doing_2.pk).update(position=8)
+
+        self.login()
+
+        response = self.post_reorder(
+            {
+                "task_id": self.todo_2.pk,
+                "target_task_list_id": self.doing_a.pk,
+                "target_position": 1,
+            }
+        )
+
+        self.todo_2.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.todo_2.task_list, self.doing_a)
+        self.assertEqual(self.todo_2.position, 1)
+        self.assert_task_order(self.todo_a, ["Todo 1", "Todo 3"])
+        self.assert_task_order(self.doing_a, ["Todo 2", "Doing 1", "Doing 2"])
+
+    def test_board_task_reorder_persists_task_list_and_position_in_database(self):
+        self.login()
+
+        self.post_reorder(
+            {
+                "task_id": self.todo_2.pk,
+                "target_task_list_id": self.doing_a.pk,
+                "target_position": 1,
+            }
+        )
+
+        persisted_task = Task.objects.get(pk=self.todo_2.pk)
+
+        self.assertEqual(persisted_task.task_list, self.doing_a)
+        self.assertEqual(persisted_task.position, 1)
 
 
 class SeedDemoCommandTests(TestCase):

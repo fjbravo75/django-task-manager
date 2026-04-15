@@ -1,4 +1,5 @@
 import csv
+import json
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -6,9 +7,11 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Max, Prefetch
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from tasks.demo_data import DEMO_USERNAME
 from tasks.forms import BoardForm, LoginForm, RegisterForm, TagForm, TaskFilterForm, TaskForm, TaskListForm, TaskMoveForm
@@ -435,6 +438,89 @@ def _get_next_task_position(task_list):
     return max_position + 1
 
 
+def _parse_board_task_reorder_payload(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None, JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
+
+    if not isinstance(payload, dict):
+        return None, JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
+
+    required_fields = ("task_id", "target_task_list_id", "target_position")
+    missing_fields = [field for field in required_fields if field not in payload]
+    if missing_fields:
+        return (
+            None,
+            JsonResponse(
+                {
+                    "ok": False,
+                    "error": "missing_fields",
+                    "missing_fields": missing_fields,
+                },
+                status=400,
+            ),
+        )
+
+    parsed_payload = {}
+    for field in required_fields:
+        value = payload[field]
+        if type(value) is not int:
+            return None, JsonResponse({"ok": False, "error": f"invalid_{field}"}, status=400)
+        parsed_payload[field] = value
+
+    if parsed_payload["target_position"] < 1:
+        return None, JsonResponse({"ok": False, "error": "invalid_target_position"}, status=400)
+
+    return parsed_payload, None
+
+
+def _assign_dense_task_positions(tasks, *, task_list):
+    for index, current_task in enumerate(tasks, start=1):
+        current_task.task_list = task_list
+        current_task.position = index
+
+
+def _reorder_task_in_board(task, *, target_task_list, target_position):
+    source_task_list = task.task_list
+    source_task_list_id = source_task_list.pk
+    target_task_list_id = target_task_list.pk
+
+    source_tasks = list(
+        Task.objects.select_for_update()
+        .filter(task_list_id=source_task_list_id)
+        .order_by("position", "pk")
+    )
+
+    if source_task_list_id == target_task_list_id:
+        reordered_tasks = [current_task for current_task in source_tasks if current_task.pk != task.pk]
+        insert_index = min(target_position - 1, len(reordered_tasks))
+        reordered_tasks.insert(insert_index, task)
+        _assign_dense_task_positions(reordered_tasks, task_list=target_task_list)
+        Task.objects.bulk_update(reordered_tasks, ["task_list", "position"])
+        return source_task_list_id, target_task_list_id, task.position
+
+    target_tasks = list(
+        Task.objects.select_for_update()
+        .filter(task_list_id=target_task_list_id)
+        .order_by("position", "pk")
+    )
+
+    remaining_source_tasks = [current_task for current_task in source_tasks if current_task.pk != task.pk]
+    reordered_target_tasks = list(target_tasks)
+    insert_index = min(target_position - 1, len(reordered_target_tasks))
+    reordered_target_tasks.insert(insert_index, task)
+
+    _assign_dense_task_positions(remaining_source_tasks, task_list=source_task_list)
+    _assign_dense_task_positions(reordered_target_tasks, task_list=target_task_list)
+
+    Task.objects.bulk_update(
+        remaining_source_tasks + reordered_target_tasks,
+        ["task_list", "position"],
+    )
+    return source_task_list_id, target_task_list_id, task.position
+
+
 def _get_task_from_board(board, task_pk):
     for task_list in board.task_lists.all():
         for task in task_list.tasks.all():
@@ -674,6 +760,45 @@ def board_task_move(request, board_pk, pk):
 
     context = _build_board_detail_context(board, bound_move_form=form)
     return render(request, "tasks/board_detail.html", context, status=200)
+
+
+@login_required
+@require_POST
+def board_task_reorder(request, board_pk):
+    board = get_object_or_404(
+        Board.objects.filter(owner=request.user).only("pk"),
+        pk=board_pk,
+    )
+
+    payload, error_response = _parse_board_task_reorder_payload(request)
+    if error_response is not None:
+        return error_response
+
+    with transaction.atomic():
+        task = get_object_or_404(
+            Task.objects.select_for_update().select_related("task_list"),
+            pk=payload["task_id"],
+            task_list__board=board,
+        )
+        target_task_list = get_object_or_404(
+            TaskList.objects.select_for_update().filter(board=board),
+            pk=payload["target_task_list_id"],
+        )
+        source_task_list_id, target_task_list_id, final_position = _reorder_task_in_board(
+            task,
+            target_task_list=target_task_list,
+            target_position=payload["target_position"],
+        )
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "task_id": task.pk,
+            "source_task_list_id": source_task_list_id,
+            "target_task_list_id": target_task_list_id,
+            "final_position": final_position,
+        }
+    )
 
 
 def _get_requested_task_list_for_user(user, requested_task_list_pk):
