@@ -335,6 +335,19 @@ def board_detail(request, pk):
 
 
 @login_required
+def board_task_move_screen(request, pk):
+    board = _get_owned_board_with_tasks(request.user, pk)
+    context = _build_board_task_move_screen_context(
+        board,
+        source_list_id=_parse_positive_int(request.GET.get("source_list")),
+        selected_task_id=_parse_positive_int(request.GET.get("task")),
+        moved=request.GET.get("moved") == "1",
+        target_list_id=_parse_positive_int(request.GET.get("target_list")),
+    )
+    return render(request, "tasks/board_task_move.html", context)
+
+
+@login_required
 def board_export_csv(request, pk):
     board = get_object_or_404(
         Board.objects.filter(owner=request.user).only("pk", "name"),
@@ -535,23 +548,33 @@ def _format_compact_due_date_label(due_date):
     return f"Vence {due_date.day} {SPANISH_MONTH_ABBREVIATIONS[due_date.month]} {due_date.year}"
 
 
+def _parse_positive_int(value):
+    try:
+        parsed_value = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if parsed_value < 1:
+        return None
+    return parsed_value
+
+
 def _build_board_detail_context(board, *, bound_move_form=None):
     all_tags = list(board.tags.all())
     board_task_lists = []
+    preview_limit = 5
     for task_list in board.task_lists.all():
         all_tasks = list(task_list.tasks.all())
-        for task in all_tasks:
+        preview_tasks = all_tasks[:preview_limit]
+        for task in preview_tasks:
             task.compact_due_date_label = _format_compact_due_date_label(task.due_date)
-            if bound_move_form is not None and bound_move_form.task.pk == task.pk:
-                task.move_form = bound_move_form
-            else:
-                task.move_form = _build_task_move_form(board, task)
         total_tasks = len(all_tasks)
         board_task_lists.append(
             {
                 "task_list": task_list,
                 "total_tasks": total_tasks,
-                "tasks": all_tasks,
+                "tasks": preview_tasks,
+                "hidden_task_count": max(total_tasks - preview_limit, 0),
             }
         )
 
@@ -561,6 +584,59 @@ def _build_board_detail_context(board, *, bound_move_form=None):
         "board_hidden_tags": all_tags[3:],
         "board_has_hidden_tags": len(all_tags) > 3,
         "board_task_lists": board_task_lists,
+    }
+
+
+def _build_board_task_move_screen_context(
+    board,
+    *,
+    source_list_id=None,
+    selected_task_id=None,
+    moved=False,
+    target_list_id=None,
+):
+    task_lists = list(board.task_lists.all())
+    active_task_list = None
+
+    if task_lists:
+        active_task_list = next(
+            (task_list for task_list in task_lists if task_list.pk == source_list_id),
+            task_lists[0],
+        )
+
+    active_tasks = list(active_task_list.tasks.all()) if active_task_list is not None else []
+    for task in active_tasks:
+        task.compact_due_date_label = _format_compact_due_date_label(task.due_date)
+
+    selected_task = next((task for task in active_tasks if task.pk == selected_task_id), None)
+
+    destination_task_lists = []
+    for task_list in task_lists:
+        if active_task_list is not None and task_list.pk == active_task_list.pk:
+            continue
+        destination_task_lists.append(
+            {
+                "task_list": task_list,
+                "total_tasks": task_list.tasks.count(),
+            }
+        )
+
+    move_feedback = None
+    if moved:
+        target_task_list = next((task_list for task_list in task_lists if task_list.pk == target_list_id), None)
+        if target_task_list is not None:
+            move_feedback = f'Tarea movida al final de "{target_task_list.name}".'
+        else:
+            move_feedback = "Tarea movida correctamente."
+
+    return {
+        "board": board,
+        "page_title": f"Mover tareas | {board.name}",
+        "active_task_list": active_task_list,
+        "active_tasks": active_tasks,
+        "selected_task": selected_task,
+        "destination_task_lists": destination_task_lists,
+        "move_feedback": move_feedback,
     }
 
 
